@@ -1,5 +1,5 @@
-# Golf BANK v3.3（Firebase Firestore 儲存版本）
-
+# 產出乾淨完整的 app.py（Firebase Firestore 版本）
+firebase_app_code = """
 import streamlit as st
 import pandas as pd
 import json
@@ -9,12 +9,11 @@ from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-BASE_URL = "https://your-streamlit-app-url/"
+BASE_URL = "https://your-streamlit-app-url/"  # 修改為你的部署網址
 
 st.set_page_config(page_title="🏌️ Golf BANK v3.3", layout="wide")
 st.title("🏌️ Golf BANK 系統")
 
-# === 初始化 Firebase Firestore ===
 @st.cache_resource
 def init_firebase():
     cred = credentials.Certificate(dict(st.secrets["firebase"]))
@@ -23,7 +22,6 @@ def init_firebase():
 
 db = init_firebase()
 
-# === Firestore 操作 ===
 def save_game_to_firebase(game_data, game_id):
     db.collection("games").document(game_id).set(game_data)
 
@@ -31,7 +29,6 @@ def load_game_from_firebase(game_id):
     doc = db.collection("games").document(game_id).get()
     return doc.to_dict() if doc.exists else None
 
-# === Query Param 自動切換模式 ===
 query_params = st.experimental_get_query_params()
 if "game_id" in query_params and not st.session_state.get("mode_initialized"):
     st.session_state.mode = "查看端介面"
@@ -229,3 +226,9 @@ elif mode == "主控端成績輸入":
 
     if game_data["completed"] >= 18:
         st.success("🏁 比賽已完成！")
+"""
+
+with open("/mnt/data/app_firebase.py", "w") as f:
+    f.write(firebase_app_code)
+
+"/mnt/data/app_firebase.py"
