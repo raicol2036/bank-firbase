@@ -4,20 +4,12 @@ import os
 import firebase_admin
 import firebase_admin
 from firebase_admin import credentials, firestore
+import json
 
 if "firebase_initialized" not in st.session_state:
-    firebase_json = {
-        "type": str(st.secrets["firebase"]["type"]),
-        "project_id": str(st.secrets["firebase"]["project_id"]),
-        "private_key_id": str(st.secrets["firebase"]["private_key_id"]),
-        "private_key": st.secrets["firebase"]["private_key"].replace("\\n", "\n"),
-        "client_email": str(st.secrets["firebase"]["client_email"]),
-        "client_id": str(st.secrets["firebase"]["client_id"]),
-        "auth_uri": str(st.secrets["firebase"]["auth_uri"]),
-        "token_uri": str(st.secrets["firebase"]["token_uri"]),
-        "auth_provider_x509_cert_url": str(st.secrets["firebase"]["auth_provider_x509_cert_url"]),
-        "client_x509_cert_url": str(st.secrets["firebase"]["client_x509_cert_url"])
-    }
+    # 將 firebase secrets 轉為 dict
+    firebase_json = json.loads(json.dumps(st.secrets["firebase"]))
+    firebase_json["private_key"] = firebase_json["private_key"].replace("\\n", "\n")
 
     try:
         cred = credentials.Certificate(firebase_json)
