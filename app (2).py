@@ -9,7 +9,7 @@ from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-BASE_URL = "https://your-streamlit-app-url/"  # 修改為你的部署網址
+BASE_URL = "https://bank-firbase.streamlit.app/"  # 修改為你的部署網址
 
 st.set_page_config(page_title="🏌️ Golf BANK v3.3", layout="wide")
 st.title("🏌️ Golf BANK 系統")
