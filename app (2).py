@@ -1,78 +1,37 @@
-# Golf BANK v3.2 修正版（Streamlit Cloud 可執行）
+# Golf BANK v3.3（Firebase Firestore 儲存版本）
 
 import streamlit as st
 import pandas as pd
 import json
-import uuid
 import qrcode
-import io
-import time
 from io import BytesIO
 from datetime import datetime
-from google.oauth2 import service_account
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseUpload
+import firebase_admin
+from firebase_admin import credentials, firestore
 
-BASE_URL = "https://your-streamlit-app-url/"  # 修改為你自己的網址
+BASE_URL = "https://your-streamlit-app-url/"
 
-st.set_page_config(page_title="🏉 Golf BANK v3.2", layout="wide")
-st.title("🏉 Golf BANK 系統")
+st.set_page_config(page_title="🏌️ Golf BANK v3.3", layout="wide")
+st.title("🏌️ Golf BANK 系統")
 
+# === 初始化 Firebase Firestore ===
 @st.cache_resource
-def connect_drive():
-    raw_secrets = st.secrets["gdrive"]
-    secrets_dict = dict(raw_secrets)
-    secrets_dict["private_key"] = secrets_dict["private_key"].replace("\\n", "\n")
-    credentials = service_account.Credentials.from_service_account_info(
-        secrets_dict,
-        scopes=["https://www.googleapis.com/auth/drive"]
-    )
-    return build('drive', 'v3', credentials=credentials)
+def init_firebase():
+    cred = credentials.Certificate(dict(st.secrets["firebase"]))
+    firebase_admin.initialize_app(cred)
+    return firestore.client()
 
-drive_service = connect_drive()
+db = init_firebase()
 
-@st.cache_resource
-def create_or_get_folder():
-    query = "mimeType='application/vnd.google-apps.folder' and name='GolfBank_Folder' and trashed=false"
-    results = drive_service.files().list(q=query, supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
-    items = results.get('files', [])
-    if items:
-        return items[0]['id']
-    else:
-        file_metadata = {
-            'name': 'GolfBank_Folder',
-            'mimeType': 'application/vnd.google-apps.folder'
-        }
-        file = drive_service.files().create(body=file_metadata, fields='id', supportsAllDrives=True).execute()
-        return file.get('id')
+# === Firestore 操作 ===
+def save_game_to_firebase(game_data, game_id):
+    db.collection("games").document(game_id).set(game_data)
 
-GAMES_FOLDER_ID = create_or_get_folder()
+def load_game_from_firebase(game_id):
+    doc = db.collection("games").document(game_id).get()
+    return doc.to_dict() if doc.exists else None
 
-def save_game_to_drive(game_data, game_id):
-    file_metadata = {'name': f'game_{game_id}.json', 'parents': [GAMES_FOLDER_ID]}
-    content = io.BytesIO(json.dumps(game_data, ensure_ascii=False, indent=2).encode("utf-8"))
-    media = MediaIoBaseUpload(content, mimetype='application/json')
-
-    query = f"name='game_{game_id}.json' and '{GAMES_FOLDER_ID}' in parents and trashed=false"
-    result = drive_service.files().list(q=query, supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
-    items = result.get('files', [])
-
-    if items:
-        file_id = items[0]['id']
-        drive_service.files().update(fileId=file_id, media_body=media, supportsAllDrives=True).execute()
-    else:
-        drive_service.files().create(body=file_metadata, media_body=media, fields='id', supportsAllDrives=True).execute()
-
-def load_game_from_drive(game_id):
-    query = f"name='game_{game_id}.json' and '{GAMES_FOLDER_ID}' in parents and trashed=false"
-    result = drive_service.files().list(q=query, supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
-    items = result.get('files', [])
-    if not items:
-        return None
-    file_id = items[0]['id']
-    file = drive_service.files().get_media(fileId=file_id).execute()
-    return json.loads(file)
-
+# === Query Param 自動切換模式 ===
 query_params = st.experimental_get_query_params()
 if "game_id" in query_params and not st.session_state.get("mode_initialized"):
     st.session_state.mode = "查看端介面"
@@ -139,20 +98,9 @@ elif mode == "設定比賽資料":
 
     def generate_game_id():
         today_str = datetime.now().strftime("%Y%m%d")
-        query = f"name contains '{today_str}' and '{GAMES_FOLDER_ID}' in parents and trashed=false"
-        result = drive_service.files().list(q=query, supportsAllDrives=True, includeItemsFromAllDrives=True).execute()
-        items = result.get('files', [])
-        used_numbers = []
-        for item in items:
-            name = item['name']
-            if name.startswith(f"game_{today_str}_"):
-                try:
-                    suffix = int(name.split("_")[-1].split(".")[0])
-                    used_numbers.append(suffix)
-                except:
-                    continue
-        next_number = max(used_numbers, default=0) + 1
-        return f"{today_str}_{str(next_number).zfill(2)}"
+        existing = db.collection("games").where("game_id", ">=", today_str).stream()
+        count = sum(1 for _ in existing)
+        return f"{today_str}_{str(count + 1).zfill(2)}"
 
     if st.button("✅ 開始球局"):
         game_id = generate_game_id()
@@ -170,14 +118,14 @@ elif mode == "設定比賽資料":
             "hole_logs": [],
             "completed": 0
         }
-        save_game_to_drive(game_data, game_id)
+        save_game_to_firebase(game_data, game_id)
         st.session_state.current_game_id = game_id
         st.session_state.mode = "主控端成績輸入"
         st.experimental_rerun()
 
 elif mode == "主控端成績輸入":
     game_id = st.session_state.current_game_id
-    game_data = load_game_from_drive(game_id)
+    game_data = load_game_from_firebase(game_id)
 
     if not game_data:
         st.error("⚠️ 找不到該比賽資料")
@@ -271,7 +219,7 @@ elif mode == "主控端成績輸入":
                     else:
                         game_data["current_titles"][p] = ""
 
-                save_game_to_drive(game_data, game_id)
+                save_game_to_firebase(game_data, game_id)
                 st.session_state[confirmed_key] = True
                 st.experimental_rerun()
         else:
