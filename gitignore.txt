@@ -1,0 +1,41 @@
+# Python 暫存檔案
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# 環境管理檔案
+.env
+.venv/
+env/
+venv/
+ENV/
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints
+
+# IDE相關（例如 VSCode）
+.vscode/
+.idea/
+
+# 本機設定檔
+.DS_Store
+Thumbs.db
+
+# Google Service Account 金鑰
+service_account.json
+
+# Pipenv
+Pipfile.lock
+
+# Streamlit 的本地暫存
+.streamlit/secrets.toml
+
+# 避免大型資料檔誤上傳
+*.log
+*.csv
+*.xlsx
+*.json
+!course_db.csv
+!players.csv
