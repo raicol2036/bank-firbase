@@ -3,24 +3,23 @@ import pandas as pd
 import os
 import firebase_admin
 from firebase_admin import credentials, firestore
+import json
 
 if "firebase_initialized" not in st.session_state:
-    firebase_json = {
-        "type": st.secrets["firebase"]["type"],
-        "project_id": st.secrets["firebase"]["project_id"],
-        "private_key_id": st.secrets["firebase"]["private_key_id"],
-        "private_key": st.secrets["firebase"]["private_key"].replace("\\n", "\n"),
-        "client_email": st.secrets["firebase"]["client_email"],
-        "client_id": st.secrets["firebase"]["client_id"],
-        "auth_uri": st.secrets["firebase"]["auth_uri"],
-        "token_uri": st.secrets["firebase"]["token_uri"],
-        "auth_provider_x509_cert_url": st.secrets["firebase"]["auth_provider_x509_cert_url"],
-        "client_x509_cert_url": st.secrets["firebase"]["client_x509_cert_url"]
-    }
-    cred = credentials.Certificate(firebase_json)
-    firebase_admin.initialize_app(cred)
-    st.session_state.db = firestore.client()
-    st.session_state.firebase_initialized = True
+    # 將 firebase secrets 轉為 dict
+    firebase_json = json.loads(json.dumps(st.secrets["firebase"]))
+    firebase_json["private_key"] = firebase_json["private_key"].replace("\\n", "\n")
+
+    try:
+        cred = credentials.Certificate(firebase_json)
+        firebase_admin.initialize_app(cred)
+        st.session_state.db = firestore.client()
+        st.session_state.firebase_initialized = True
+    except Exception as e:
+        st.error("❌ Firebase 初始化失敗，請檢查 secrets 設定")
+        st.exception(e)
+        st.stop()
+
 
 # --- 初始化資料 ---
 CSV_PATH = "players.csv"
