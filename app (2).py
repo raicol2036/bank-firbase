@@ -40,47 +40,6 @@ def initialize_firebase():
 # 先設置頁面配置，再初始化 Firebase
 initialize_firebase()  # ✅ 延後到 set_page_config 之後執行
 
-# ========== 自動產生 game_id + 顯示 QR code ==========
-if "game_id" not in st.session_state:
-    now = datetime.now().strftime("%Y%m%d_%H%M%S")
-    st.session_state.game_id = f"game_{now}"
-game_id = st.session_state.game_id
-
-st.title("🏌️ 高爾夫BANK系統")
-st.markdown(f"🎯 本場賽事編號：`{game_id}`")
-
-# ⚠️ 請記得替換為你實際部署的網址
-share_url = f"https://bank-firbase.streamlit.app/?game_id={game_id}"
-
-qr = qrcode.make(share_url)
-buf = BytesIO()
-qr.save(buf)
-st.image(buf.getvalue(), caption="📱 分享賽事 QR Code")
-# --- 初始化資料 ---
-CSV_PATH = "players.csv"
-COURSE_DB_PATH = "course_db.csv"
-
-if "players" not in st.session_state:
-    if os.path.exists(CSV_PATH):
-        df = pd.read_csv(CSV_PATH)
-        st.session_state.players = df["name"].dropna().tolist()
-    else:
-        st.session_state.players = []
-
-if os.path.exists(COURSE_DB_PATH):
-    course_df = pd.read_csv(COURSE_DB_PATH)
-else:
-    st.error("找不到 course_db.csv！請先準備好球場資料。")
-    st.stop()
-
-st.set_page_config(page_title="🏌️ 高爾夫BANK系統", layout="wide")
-st.title("🏌️ 高爾夫BANK系統")
-
-# --- 模式設定 ---
-if "mode" not in st.session_state:
-    st.session_state.mode = "主控操作端"
-mode = st.session_state.mode
-
 # --- 球場選擇 ---
 course_options = course_df["course_name"].unique().tolist()
 selected_course = st.selectbox("選擇球場", course_options)
