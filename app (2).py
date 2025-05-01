@@ -333,7 +333,7 @@ if mode == "主控操作端" and "game_initialized" in st.session_state:
     img.save(img_bytes, format="PNG")
     img_bytes.seek(0)
 
-    st.image(img_bytes, width=180, caption="掃此加入比賽")
+    st.image(img_bytes, width=180, caption="掃此查詢比賽")
     st.markdown(f"**🆔 遊戲 ID： `{st.session_state.game_id}`**")
     st.markdown("---")
 
