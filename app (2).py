@@ -1,11 +1,5 @@
-mport streamlit as st
-
-# ✅ 正确：在所有 Streamlit 操作之前设置页面配置
-st.set_page_config(
-    page_title="🏌️ 高爾夫BANK系統",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+import streamlit as st
+st.set_page_config(page_title="🏌️ 高爾夫BANK系統", layout="wide")  # ✅ 必須是第一個 Streamlit 指令
 
 # 其餘 import
 import pandas as pd
@@ -17,29 +11,34 @@ from io import BytesIO
 from datetime import datetime
 
 # ========== Firebase 初始化 ==========
-if "firebase_initialized" not in st.session_state:
-    try:
-        if not firebase_admin._apps:  # ✅ 僅初始化一次
-            cred = credentials.Certificate({
-                "type": st.secrets["firebase"]["type"],
-                "project_id": st.secrets["firebase"]["project_id"],
-                "private_key_id": st.secrets["firebase"]["private_key_id"],
-                "private_key": st.secrets["firebase"]["private_key"].replace("\\n", "\n"),
-                "client_email": st.secrets["firebase"]["client_email"],
-                "client_id": st.secrets["firebase"]["client_id"],
-                "auth_uri": st.secrets["firebase"]["auth_uri"],
-                "token_uri": st.secrets["firebase"]["token_uri"],
-                "auth_provider_x509_cert_url": st.secrets["firebase"]["auth_provider_x509_cert_url"],
-                "client_x509_cert_url": st.secrets["firebase"]["client_x509_cert_url"]
-            })
-            firebase_admin.initialize_app(cred)
+def initialize_firebase():
+    if "firebase_initialized" not in st.session_state:
+        try:
+            if not firebase_admin._apps:
+                # ✅ 將 st.secrets 的使用延遲到 set_page_config 之後
+                cred = credentials.Certificate({
+                    "type": st.secrets["firebase"]["type"],
+                    "project_id": st.secrets["firebase"]["project_id"],
+                    "private_key_id": st.secrets["firebase"]["private_key_id"],
+                    "private_key": st.secrets["firebase"]["private_key"].replace("\\n", "\n"),
+                    "client_email": st.secrets["firebase"]["client_email"],
+                    "client_id": st.secrets["firebase"]["client_id"],
+                    "auth_uri": st.secrets["firebase"]["auth_uri"],
+                    "token_uri": st.secrets["firebase"]["token_uri"],
+                    "auth_provider_x509_cert_url": st.secrets["firebase"]["auth_provider_x509_cert_url"],
+                    "client_x509_cert_url": st.secrets["firebase"]["client_x509_cert_url"]
+                })
+                firebase_admin.initialize_app(cred)
+            st.session_state.db = firestore.client()
+            st.session_state.firebase_initialized = True
+        except Exception as e:
+            st.error("❌ Firebase 初始化失敗，請確認 secrets 格式與欄位")
+            st.exception(e)
+            st.stop()
 
-        st.session_state.db = firestore.client()
-        st.session_state.firebase_initialized = True
-    except Exception as e:
-        st.error("❌ Firebase 初始化失敗，請確認 secrets 格式與欄位")
-        st.exception(e)
-        st.stop()
+# ========== 主程式邏輯 ==========
+# 先設置頁面配置，再初始化 Firebase
+initialize_firebase()  # ✅ 延後到 set_page_config 之後執行
 
 # ========== 自動產生 game_id + 顯示 QR code ==========
 if "game_id" not in st.session_state:
@@ -51,13 +50,12 @@ st.title("🏌️ 高爾夫BANK系統")
 st.markdown(f"🎯 本場賽事編號：`{game_id}`")
 
 # ⚠️ 請記得替換為你實際部署的網址
-share_url = f"https://your-streamlit-app-url/?game_id={game_id}"
+share_url = f"https://bank-firbase.streamlit.app/?game_id={game_id}"
 
 qr = qrcode.make(share_url)
 buf = BytesIO()
 qr.save(buf)
 st.image(buf.getvalue(), caption="📱 分享賽事 QR Code")
-
 # --- 初始化資料 ---
 CSV_PATH = "players.csv"
 COURSE_DB_PATH = "course_db.csv"
