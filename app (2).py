@@ -280,7 +280,6 @@ point_bank = 1
 from datetime import datetime
 if "game_id" not in st.session_state:
     st.session_state.game_id = datetime.now().strftime("%Y%m%d%H%M%S")
-#---------
 # ✅ 強化主控端：只有在選滿 4 位玩家後才初始化 Firebase 並產生 QR
 if (
     mode == "主控操作端"
@@ -292,7 +291,7 @@ if (
 ):
     players = st.session_state.selected_players
 
-    # 🔁 建立初始 Firebase 賽事資料
+# 🔁 建立初始 Firebase 賽事資料
     game_data = {
         "players": players,
         "scores": {p: {} for p in players},
@@ -316,10 +315,7 @@ if (
     st.write("🆔 賽事編號：", st.session_state.game_id)
     st.write("👥 玩家名單：", players)
 
-    # 📸 產生 QR code 供查看端掃描加入
-    import qrcode
-    import io
-
+    # 📸 產生 QR code
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -336,10 +332,11 @@ if (
     img_bytes.seek(0)
 
     # ✅ 顯示 QR code 在主畫面上方
-st.markdown("## 📲 比賽加入 QR Code")
-st.image(img_bytes, width=180, caption="掃此加入比賽")
-st.markdown(f"**🆔 遊戲 ID： `{st.session_state.game_id}`**")
-st.markdown("---")
+    st.markdown("## 📲 比賽加入 QR Code")
+    st.image(img_bytes, width=180, caption="掃此加入比賽")
+    st.markdown(f"**🆔 遊戲 ID： `{st.session_state.game_id}`**")
+    st.markdown("---")
+
 
 # --- 主流程 ---
 for i in range(18):
