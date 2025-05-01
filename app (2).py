@@ -372,7 +372,7 @@ if mode == "隊員查看端":
 
         confirmed = st.checkbox(f"✅ 確認第{i+1}洞成績", key=f"confirm_{i}")
         if not confirmed:
-          st.stop()  # ✅ 正確：終止 Streamlit 的執行流程
+          continue  # ❌ 錯誤：不在迴圈內，會出現 SyntaxError
 
 
     if f"confirm_{i}" in st.session_state and st.session_state[f"confirm_{i}"]:
