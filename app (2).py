@@ -258,7 +258,18 @@ for i in range(18):
 
 # --- 總結結果 ---
 st.subheader("📊 總結結果")
- === 新增：生成遊戲ID二維碼 ===
+total_bet = bet_per_person * len(players)
+completed = len([i for i in range(18) if st.session_state.get(f"confirm_{i}", False)])
+result = pd.DataFrame({
+    "總點數": [running_points[p] for p in players],
+    "賭金結果": [running_points[p] * bet_per_person - completed * bet_per_person for p in players],
+    "頭銜": [current_titles[p] for p in players]
+}, index=players).sort_values("賭金結果", ascending=False)
+st.dataframe(result)
+
+# =========================================
+# ✅ 新增：生成遊戲ID二維碼（正确缩进与注释格式）
+# =========================================
 if mode == "主控操作端":
     # 生成QR Code
     qr = qrcode.QRCode(
@@ -292,32 +303,6 @@ if mode == "主控操作端":
         """)
         
 elif mode == "隊員查看端" and game_id:
-    # 隊員端顯示簡化版QR碼
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=6,
-        border=2,
-    )
-    qr.add_data(game_id)
-    qr.make(fit=True)
-    
-    img = qr.make_image(fill_color="darkgreen", back_color="white")  # 高爾夫主題色
-    img_byte_arr = io.BytesIO()
-    img.save(img_byte_arr, format='PNG')
-    img_byte_arr.seek(0)
-    
-    st.markdown("---")
-    st.image(img_byte_arr, width=150, caption="本場比賽QR碼")
-total_bet = bet_per_person * len(players)
-completed = len([i for i in range(18) if st.session_state.get(f"confirm_{i}", False)])
-result = pd.DataFrame({
-    "總點數": [running_points[p] for p in players],
-    "賭金結果": [running_points[p] * bet_per_person - completed * bet_per_person for p in players],
-    "頭銜": [current_titles[p] for p in players]
-}, index=players).sort_values("賭金結果", ascending=False)
-st.dataframe(result)
-
 st.subheader("📖 洞別說明 Log")
 for line in hole_logs:
     st.text(line)
