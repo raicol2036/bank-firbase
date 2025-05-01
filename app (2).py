@@ -192,7 +192,7 @@ for i in range(18):
                 st.write(f"桿數: {score}")
                 event_list = events.loc[p, f"第{i+1}洞"] if f"第{i+1}洞" in events.columns else []
                 event_display = [k for k, v in event_translate.items() if v in event_list]
-                st.write(f"事件: {', '.join(event_display) if event_display else '無'")
+                st.write(f"事件: {', '.join(event_display) if event_display else '無'}")
         
         if i < len(hole_logs):
             st.markdown(f"`{hole_logs[i]}`")
