@@ -267,13 +267,8 @@ result = pd.DataFrame({
 }, index=players).sort_values("賭金結果", ascending=False)
 st.dataframe(result)
 
-# =========================================
-# ✅ 新增：生成遊戲ID二維碼（正确缩进与注释格式）
-# =========================================
-# === 二维码生成部分修正 ===
-elif mode == "隊員查看端" and game_id:
-    # ✅ 正确缩进开始
-    # 隊員端顯示簡化版QR碼
+# --- 查看端顯示 QR 碼 ---
+if mode == "隊員查看端" and game_id:
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -282,20 +277,17 @@ elif mode == "隊員查看端" and game_id:
     )
     qr.add_data(game_id)
     qr.make(fit=True)
-    
+
     img = qr.make_image(fill_color="darkgreen", back_color="white")
-    img_byte_arr = io.BytesIO()
+    img_byte_arr = BytesIO()
     img.save(img_byte_arr, format='PNG')
     img_byte_arr.seek(0)
-    
-    st.markdown("---")
-    st.image(img_byte_arr, width=150, caption="本場比賽QR碼")
-    # ✅ 正确缩进结束
 
-# --- 洞別日誌部分保持原位置 ---
+    st.markdown("---")
+    st.image(img_byte_arr, width=150, caption="本場比賽 QR 碼")
+
+# --- 洞別日誌顯示 ---
 st.subheader("📖 洞別說明 Log")
 for line in hole_logs:
     st.text(line)
-st.subheader("📖 洞別說明 Log")
-for line in hole_logs:
-    st.text(line)
+
