@@ -144,21 +144,6 @@ if "mode" not in st.session_state:
     st.session_state.mode = "主控操作端"
 mode = st.session_state.mode
 
-if mode == "隊員查看端":
-    game_id = st.query_params.get("game_id", [""])[0]  # 從網址 query 抓 game_id
-    st.session_state.game_id = game_id
-
-    if not game_id:
-        st.warning("⚠️ 請輸入遊戲 ID")
-        st.stop()
-
-    doc_ref = st.session_state.db.collection("golf_games").document(game_id)
-    doc = doc_ref.get()
-
-    if not doc.exists:
-        st.warning("❌ 找不到此比賽，請確認遊戲 ID 是否正確")
-        st.stop()
-
     game_data = doc.to_dict()
 
     # ✅ 將資料解包為主程式用變數（否則會報未定義錯）
