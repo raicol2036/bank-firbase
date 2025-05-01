@@ -67,44 +67,68 @@ if "mode" not in st.session_state:
     st.session_state.mode = "主控操作端"
 mode = st.session_state.mode
 
-# --- 查看端專用：從 Firebase 讀取資料 ---
+# --- 查看端邏輯：初始化、讀取 Firebase 資料 ---
 if mode == "隊員查看端":
 
     if "firebase_initialized" not in st.session_state:
         st.error("❌ Firebase 尚未初始化")
         st.stop()
 
-    game_id = st.session_state.get("game_id", "")
-    if not game_id:
-        st.warning("⚠️ 查無 game_id，請確認網址是否帶有參數")
-        st.stop()
+    # ✅ 確保 game_id 已設定
+    if "game_id" not in st.session_state:
+        query_params = st.query_params
+        game_id_param = query_params.get("game_id", "")
+        if isinstance(game_id_param, list):
+            game_id_param = game_id_param[0]
+        if not game_id_param:
+            st.warning("⚠️ 未帶入 game_id 參數，無法讀取比賽")
+            st.stop()
+        st.session_state.game_id = game_id_param
 
-    st.write(f"🔍 嘗試讀取比賽 `{game_id}` 資料...")  # debug log
+    # ✅ 避免重複讀取 Firebase（只讀一次）
+    if "game_data_loaded" not in st.session_state:
+        game_id = st.session_state.game_id
+        doc_ref = st.session_state.db.collection("golf_games").document(game_id)
+        doc = doc_ref.get()
 
-    doc_ref = st.session_state.db.collection("golf_games").document(game_id)
-    doc = doc_ref.get()
+        if not doc.exists:
+            st.error(f"❌ Firebase 中找不到比賽 `{game_id}`")
+            st.stop()
 
-    if not doc.exists:
-        st.error(f"❌ Firebase 中找不到比賽 `{game_id}`，請確認主控端已建立資料")
-        st.stop()
+        game_data = doc.to_dict()
+        st.session_state.players = game_data["players"]
+        st.session_state.scores = pd.DataFrame.from_dict(game_data["scores"], orient="index")
+        st.session_state.events = pd.DataFrame.from_dict(game_data["events"], orient="index")
+        st.session_state.running_points = game_data["points"]
+        st.session_state.current_titles = game_data.get("titles", {p: "" for p in game_data["players"]})
+        st.session_state.hole_logs = game_data["logs"]
+        st.session_state.completed = game_data["completed_holes"]
+        st.session_state.selected_course = game_data["course"]
+        st.session_state.front_area = game_data["front_area"]
+        st.session_state.back_area = game_data["back_area"]
+        st.session_state.bet_per_person = game_data["bet_per_person"]
+        st.session_state.par = game_data["par"]
+        st.session_state.hcp = game_data["hcp"]
 
-    # ✅ 成功取出資料，解包為主程式可用變數
-    game_data = doc.to_dict()
-    players = game_data["players"]
-    scores = pd.DataFrame.from_dict(game_data["scores"], orient="index")
-    events = pd.DataFrame.from_dict(game_data["events"], orient="index")
-    running_points = game_data["points"]
-    current_titles = game_data.get("titles", {p: "" for p in players})
-    hole_logs = game_data["logs"]
-    completed = game_data["completed_holes"]
-    selected_course = game_data["course"]
-    front_area = game_data["front_area"]
-    back_area = game_data["back_area"]
-    bet_per_person = game_data["bet_per_person"]
-    par = game_data["par"]
-    hcp = game_data["hcp"]
+        st.session_state.game_data_loaded = True
+        st.success(f"✅ 成功載入比賽 `{game_id}`")
+        st.rerun()  # 🔁 強制 rerun 讓資料轉為可用狀態
 
-    st.success(f"✅ 成功讀取比賽 `{game_id}` 資料")
+    # ✅ 將狀態資料釋出為主程式變數
+    players = st.session_state.players
+    scores = st.session_state.scores
+    events = st.session_state.events
+    running_points = st.session_state.running_points
+    current_titles = st.session_state.current_titles
+    hole_logs = st.session_state.hole_logs
+    completed = st.session_state.completed
+    selected_course = st.session_state.selected_course
+    front_area = st.session_state.front_area
+    back_area = st.session_state.back_area
+    bet_per_person = st.session_state.bet_per_person
+    par = st.session_state.par
+    hcp = st.session_state.hcp
+
 
 
 # --- 根據網址參數自動切換查看端模式 ---
