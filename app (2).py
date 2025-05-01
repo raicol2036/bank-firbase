@@ -413,6 +413,32 @@ result = pd.DataFrame({
     "頭銜": [current_titles[p] for p in players]
 }, index=players).sort_values("賭金結果", ascending=False)
 st.dataframe(result)
+#-------------
+if (
+    mode == "主控操作端"
+    and "game_id" in st.session_state
+    and len(players) == 4  # ⚠️ 確保選滿人
+    and "game_initialized" not in st.session_state
+):
+    game_data = {
+        "players": players,
+        "scores": {p: {} for p in players},
+        "events": {p: {} for p in players},
+        "points": {p: 0 for p in players},
+        "titles": {p: "" for p in players},
+        "logs": [],
+        "par": par,
+        "hcp": hcp,
+        "course": selected_course,
+        "front_area": front_area,
+        "back_area": back_area,
+        "bet_per_person": bet_per_person,
+        "completed_holes": 0
+    }
+    st.session_state.db.collection("golf_games").document(st.session_state.game_id).set(game_data)
+    st.session_state.game_initialized = True
+    st.success("✅ 賽事資料已寫入 Firebase")
+    st.write("🆔 賽事編號：", st.session_state.game_id)
 
 # --- QR Code 生成（僅主控端）---
 # ✅ 確保已選滿 4 位球員再初始化 Firebase
