@@ -49,7 +49,7 @@ else:
     st.error("找不到 course_db.csv！請先準備好球場資料。")
     st.stop()
 
-st.set_page_config(page_title="🏌️ 高爾夫BANK系統", layout="entered")
+st.set_page_config(page_title="🏌️ 高爾夫BANK系統", layout="centered")
 st.title("🏌️ 高爾夫BANK系統")
 
 #-------
