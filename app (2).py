@@ -280,6 +280,24 @@ point_bank = 1
 from datetime import datetime
 if "game_id" not in st.session_state:
     st.session_state.game_id = datetime.now().strftime("%Y%m%d%H%M%S")
+    
+    # ✅ 只在查看端呈現總表與 Log，並中止後續流程
+if mode == "隊員查看端":
+    st.subheader("📊 總結結果")
+    total_bet = bet_per_person * len(players)
+    result = pd.DataFrame({
+        "總點數": [running_points[p] for p in players],
+        "賭金結果": [running_points[p] * bet_per_person - completed * bet_per_person for p in players],
+        "頭銜": [current_titles[p] for p in players]
+    }, index=players).sort_values("賭金結果", ascending=False)
+    st.dataframe(result)
+
+    st.subheader("📖 洞別說明 Log")
+    for line in hole_logs:
+        st.text(line)
+
+    st.stop()
+
 # ✅ 強化主控端：只有在選滿 4 位玩家後才初始化 Firebase 並產生 QR
 if (
     mode == "主控操作端"
@@ -337,10 +355,6 @@ if mode == "主控操作端" and "game_initialized" in st.session_state:
     st.markdown(f"**🆔 遊戲 ID： `{st.session_state.game_id}`**")
     st.markdown("---")
 
-
-
-# --- 主流程 ---
-# 🧾 查看端簡化畫面，只顯示總表與 log
 # --- 主流程 ---
 for i in range(18):
     if mode == "隊員查看端" and not (f"confirm_{i}" in st.session_state and st.session_state[f"confirm_{i}"]):
