@@ -306,7 +306,7 @@ for i in range(18):
             "bet_per_person": bet_per_person,
             "completed_holes": completed
         }
-        st.session_state.db.collection("golf_games").document(game_id).set(game_data)
+        st.session_state.db.collection("golf_games").document(st.session_state.game_id).set(game_data)
 
 # --- 總結結果 ---
 st.subheader("📊 總結結果")
