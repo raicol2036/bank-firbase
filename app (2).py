@@ -3,6 +3,7 @@ import pandas as pd
 import os
 import firebase_admin
 from firebase_admin import credentials, firestore
+import qrcode
 
 if "firebase_initialized" not in st.session_state:
     try:
@@ -27,6 +28,23 @@ if "firebase_initialized" not in st.session_state:
         st.error("❌ Firebase 初始化失敗，請確認 secrets 格式與欄位")
         st.exception(e)
         st.stop()
+
+# --- 自動產生 game_id（建議放在 Firebase 初始化之後）---
+if "game_id" not in st.session_state:
+    now = datetime.now().strftime("%Y%m%d_%H%M%S")
+    st.session_state.game_id = f"game_{now}"
+game_id = st.session_state.game_id
+
+from io import BytesIO
+from datetime import datetime
+# --- 顯示 game_id 與 QR code ---
+st.markdown(f"🎯 本場賽事編號：`{game_id}`")
+share_url = f"https://your-streamlit-app-url/?game_id={game_id}"  # 替換為實際網址
+
+qr = qrcode.make(share_url)
+buf = BytesIO()
+qr.save(buf)
+st.image(buf.getvalue(), caption="📱 分享賽事 QR Code")
 
 
 # --- 初始化資料 ---
