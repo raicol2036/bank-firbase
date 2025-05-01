@@ -336,10 +336,8 @@ result = pd.DataFrame({
 st.dataframe(result)
 
 # --- QR Code 生成（僅主控端）---
-# --- QR Code 生成（僅主控端）---
-if mode == "主控操作端" and "game_id" in st.session_state:
-
-    # ✅ 立即初始化 Firebase 資料（讓掃碼查看端找得到）
+# ✅ 確保已選滿 4 位球員再初始化 Firebase
+if mode == "主控操作端" and "game_id" in st.session_state and len(players) == 4:
     if "game_initialized" not in st.session_state:
         game_data = {
             "players": players,
@@ -358,6 +356,7 @@ if mode == "主控操作端" and "game_id" in st.session_state:
         }
         st.session_state.db.collection("golf_games").document(st.session_state.game_id).set(game_data)
         st.session_state.game_initialized = True
+
 
     # ✅ QR Code 產生
     qr = qrcode.QRCode(
