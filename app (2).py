@@ -335,10 +335,11 @@ if (
     img.save(img_bytes, format="PNG")
     img_bytes.seek(0)
 
-    with st.sidebar:
-        st.subheader("📲 比賽加入碼")
-        st.image(img_bytes, width=200, caption="掃此加入比賽")
-        st.markdown(f"**遊戲ID:** `{st.session_state.game_id}`")
+    # ✅ 顯示 QR code 在主畫面上方
+st.markdown("## 📲 比賽加入 QR Code")
+st.image(img_bytes, width=200, caption="掃此加入比賽")
+st.markdown(f"**🆔 遊戲 ID： `{st.session_state.game_id}`**")
+st.markdown("---")
 
 # --- 主流程 ---
 for i in range(18):
