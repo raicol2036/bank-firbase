@@ -65,31 +65,38 @@ if "mode" not in st.session_state:
     st.session_state.mode = "主控操作端"
 mode = st.session_state.mode
 
-# --- 队员查看端：实时同步逻辑 ---
 if mode == "隊員查看端":
-    # ✅ 新增：从Firebase获取最新游戏数据
-    game_id = st.text_input("輸入遊戲ID", value="test_game_001")  # 可改为自动生成或传递
+    game_id = st.query_params.get("game_id", [""])[0]  # 從網址 query 抓 game_id
+    st.session_state.game_id = game_id
+
+    if not game_id:
+        st.warning("⚠️ 請輸入遊戲 ID")
+        st.stop()
+
     doc_ref = st.session_state.db.collection("golf_games").document(game_id)
     doc = doc_ref.get()
-    
-    if doc.exists:
-        game_data = doc.to_dict()
-        # 同步关键数据到session_state
-        st.session_state.players = game_data["players"]
-        scores = pd.DataFrame.from_dict(game_data["scores"], orient="index")
-        events = pd.DataFrame.from_dict(game_data["events"], orient="index")
-        running_points = game_data["points"]
-        hole_logs = game_data["logs"]
-        completed = game_data["completed_holes"]
-        
-        # 更新页面显示参数
-        selected_course = game_data["course"]
-        front_area = game_data["front_area"]
-        back_area = game_data["back_area"]
-        bet_per_person = game_data["bet_per_person"]
-    else:
-        st.warning("等待主控端開始遊戲...")
-        st.stop()  # 无数据时停止渲染后续内容
+
+    if not doc.exists:
+        st.warning("❌ 找不到此比賽，請確認遊戲 ID 是否正確")
+        st.stop()
+
+    game_data = doc.to_dict()
+
+    # ✅ 將資料解包為主程式用變數（否則會報未定義錯）
+    players = game_data["players"]
+    scores = pd.DataFrame.from_dict(game_data["scores"], orient="index")
+    events = pd.DataFrame.from_dict(game_data["events"], orient="index")
+    running_points = game_data["points"]
+    current_titles = game_data.get("titles", {p: "" for p in players})
+    hole_logs = game_data["logs"]
+    completed = game_data["completed_holes"]
+    selected_course = game_data["course"]
+    front_area = game_data["front_area"]
+    back_area = game_data["back_area"]
+    bet_per_person = game_data["bet_per_person"]
+    par = game_data["par"]
+    hcp = game_data["hcp"]
+
         
 # --- 球場選擇 ---
 course_options = course_df["course_name"].unique().tolist()
