@@ -4,6 +4,8 @@ import os
 import firebase_admin
 from firebase_admin import credentials, firestore
 import qrcode
+from io import BytesIO
+from datetime import datetime
 
 if "firebase_initialized" not in st.session_state:
     try:
@@ -35,8 +37,6 @@ if "game_id" not in st.session_state:
     st.session_state.game_id = f"game_{now}"
 game_id = st.session_state.game_id
 
-from io import BytesIO
-from datetime import datetime
 # --- 顯示 game_id 與 QR code ---
 st.markdown(f"🎯 本場賽事編號：`{game_id}`")
 share_url = f"https://your-streamlit-app-url/?game_id={game_id}"  # 替換為實際網址
@@ -120,7 +120,6 @@ running_points = {p: 0 for p in players}
 current_titles = {p: "" for p in players}
 hole_logs = []
 point_bank = 1
-game_id = "test_game_001"  # 建議後續加上自訂輸入或時間戳自動產生
 
 # --- 主流程 ---
 for i in range(18):
