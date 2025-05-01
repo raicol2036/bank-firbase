@@ -112,8 +112,6 @@ if new:
         st.success(f"✅ 已新增球員 {new} 至資料庫")
     # ✅ 不要強制加入 players，避免觸發 max_selections 限制
 
-    if new not in players and len(players) < 4:
-
 if len(players) == 0:
     st.warning("⚠️ 請先選擇至少一位球員")
     st.stop()
