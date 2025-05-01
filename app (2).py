@@ -68,14 +68,15 @@ if "mode" not in st.session_state:
 mode = st.session_state.mode
 
 # --- 查看端邏輯：初始化、讀取 Firebase 資料 ---
-# --- 查看端邏輯：初始化、讀取 Firebase 資料 ---
 if mode == "隊員查看端":
 
     if "firebase_initialized" not in st.session_state:
         st.error("❌ Firebase 尚未初始化")
         st.stop()
 
+    # ✅ 確保 game_id 已設定
     if "game_id" not in st.session_state:
+        query_params = st.query_params
         game_id_param = query_params.get("game_id", "")
         if isinstance(game_id_param, list):
             game_id_param = game_id_param[0]
@@ -84,10 +85,9 @@ if mode == "隊員查看端":
             st.stop()
         st.session_state.game_id = game_id_param
 
-    game_id = st.session_state.game_id
-
-    # ✅ 避免重複載入
+    # ✅ 避免重複讀取 Firebase（只讀一次）
     if "game_data_loaded" not in st.session_state:
+        game_id = st.session_state.game_id
         doc_ref = st.session_state.db.collection("golf_games").document(game_id)
         doc = doc_ref.get()
 
@@ -112,9 +112,9 @@ if mode == "隊員查看端":
 
         st.session_state.game_data_loaded = True
         st.success(f"✅ 成功載入比賽 `{game_id}`")
-        st.rerun()  # 強制刷新一次來讓狀態完整
+        st.rerun()  # 🔁 強制 rerun 讓資料轉為可用狀態
 
-    # 將狀態轉出為主程式變數（不用再重抓）
+    # ✅ 將狀態資料釋出為主程式變數
     players = st.session_state.players
     scores = st.session_state.scores
     events = st.session_state.events
@@ -128,6 +128,8 @@ if mode == "隊員查看端":
     bet_per_person = st.session_state.bet_per_person
     par = st.session_state.par
     hcp = st.session_state.hcp
+
+
 
 # --- 根據網址參數自動切換查看端模式 ---
 query_params = st.query_params
