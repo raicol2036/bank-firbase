@@ -315,7 +315,9 @@ if (
     st.write("🆔 賽事編號：", st.session_state.game_id)
     st.write("👥 玩家名單：", players)
 
-    # 📸 產生 QR code
+    # ✅ 顯示 QR code：只要 game 已初始化就會顯示，不受玩家欄位變動影響
+if mode == "主控操作端" and "game_initialized" in st.session_state:
+    # 重新產生 QR 圖（防止重整後變數不存在）
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
@@ -331,11 +333,11 @@ if (
     img.save(img_bytes, format="PNG")
     img_bytes.seek(0)
 
-    # ✅ 顯示 QR code 在主畫面上方
     st.markdown("## 📲 比賽加入 QR Code")
     st.image(img_bytes, width=180, caption="掃此加入比賽")
     st.markdown(f"**🆔 遊戲 ID： `{st.session_state.game_id}`**")
     st.markdown("---")
+
 
 
 # --- 主流程 ---
