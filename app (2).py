@@ -1,4 +1,6 @@
 import streamlit as st
+st.set_page_config(page_title="🏌️ 高爾夫BANK系統", layout="wide")  # 必須放在第一個！
+
 import pandas as pd
 import os
 import firebase_admin
@@ -7,9 +9,10 @@ import qrcode
 from io import BytesIO
 from datetime import datetime
 
+# ========== Firebase 初始化 ==========
 if "firebase_initialized" not in st.session_state:
     try:
-        if not firebase_admin._apps:  # ←✅ 關鍵：只有沒初始化過才做
+        if not firebase_admin._apps:  # ✅ 僅初始化一次
             cred = credentials.Certificate({
                 "type": st.secrets["firebase"]["type"],
                 "project_id": st.secrets["firebase"]["project_id"],
@@ -31,21 +34,22 @@ if "firebase_initialized" not in st.session_state:
         st.exception(e)
         st.stop()
 
-# --- 自動產生 game_id（建議放在 Firebase 初始化之後）---
+# ========== 自動產生 game_id + 顯示 QR code ==========
 if "game_id" not in st.session_state:
     now = datetime.now().strftime("%Y%m%d_%H%M%S")
     st.session_state.game_id = f"game_{now}"
 game_id = st.session_state.game_id
 
-# --- 顯示 game_id 與 QR code ---
+st.title("🏌️ 高爾夫BANK系統")
 st.markdown(f"🎯 本場賽事編號：`{game_id}`")
-share_url = f"https://your-streamlit-app-url/?game_id={game_id}"  # 替換為實際網址
+
+# ⚠️ 請記得替換為你實際部署的網址
+share_url = f"https://your-streamlit-app-url/?game_id={game_id}"
 
 qr = qrcode.make(share_url)
 buf = BytesIO()
 qr.save(buf)
 st.image(buf.getvalue(), caption="📱 分享賽事 QR Code")
-
 
 # --- 初始化資料 ---
 CSV_PATH = "players.csv"
