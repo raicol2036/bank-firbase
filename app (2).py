@@ -67,6 +67,18 @@ if mode == "隊員查看端":
         doc = doc_ref.get()
         if doc.exists:
             game_data = doc.to_dict()
+            
+             # ✅ 新增：Firebase 数据完整性检查
+            required_fields = ["players", "scores", "events", "par", "hcp"]
+            missing_fields = [field for field in required_fields if field not in game_data]
+            if missing_fields:
+                st.error(f"數據不完整，缺失字段: {', '.join(missing_fields)}")
+                st.stop()
+           
+            if len(game_data["players"]) == 0:  # ✅ 新增：空球员列表检查
+                st.error("球員列表為空，請聯繫主控端")
+                st.stop()
+                
             st.session_state.players = game_data["players"]
             scores = pd.DataFrame.from_dict(game_data["scores"], orient="index")
             events = pd.DataFrame.from_dict(game_data["events"], orient="index")
@@ -124,6 +136,10 @@ if mode == "主控操作端":
 if mode == "主控操作端":
     players = st.multiselect("選擇參賽球員（最多4位）", st.session_state.players, max_selections=4)
     new = st.text_input("新增球員")
+    # ✅ 新增：球员数量验证
+    if len(players) == 0:
+        st.warning("請選擇至少1位球員")
+        st.stop()  # 阻止进入主流程
     if new:
         if new not in st.session_state.players:
             st.session_state.players.append(new)
