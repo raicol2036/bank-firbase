@@ -338,8 +338,8 @@ if mode == "主控操作端" and "game_id" in st.session_state:
         border=4
     )
     game_url = f"https://bank-firbase.streamlit.app/?mode=view&game_id={st.session_state.game_id}"
-qr.add_data(game_url)
-qr.make(fit=True)
+    qr.add_data(game_url)
+    qr.make(fit=True)
     
     img = qr.make_image(fill_color="darkgreen", back_color="white")
     img_bytes = io.BytesIO()
