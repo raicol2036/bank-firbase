@@ -201,6 +201,28 @@ point_bank = 1
 from datetime import datetime
 if "game_id" not in st.session_state:
     st.session_state.game_id = datetime.now().strftime("%Y%m%d%H%M%S")
+#----------
+if mode == "主控操作端" and "firebase_initialized" in st.session_state:
+    # 初始化空資料寫入 Firebase（僅一次）
+    if "game_initialized" not in st.session_state:
+        game_data = {
+            "players": players,
+            "scores": {p: {} for p in players},
+            "events": {p: {} for p in players},
+            "points": {p: 0 for p in players},
+            "titles": {p: "" for p in players},
+            "logs": [],
+            "par": par,
+            "hcp": hcp,
+            "course": selected_course,
+            "front_area": front_area,
+            "back_area": back_area,
+            "bet_per_person": bet_per_person,
+            "completed_holes": 0
+        }
+        st.session_state.db.collection("golf_games").document(st.session_state.game_id).set(game_data)
+        st.session_state.game_initialized = True
+        st.success("✅ 比賽資料已初始化上傳 Firebase")
 
 # --- 主流程 ---
 for i in range(18):
