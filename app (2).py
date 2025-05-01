@@ -1,5 +1,11 @@
-import streamlit as st
-st.set_page_config(page_title="🏌️ 高爾夫BANK系統", layout="wide")  # ✅ 必須是第一個 Streamlit 指令
+mport streamlit as st
+
+# ✅ 正确：在所有 Streamlit 操作之前设置页面配置
+st.set_page_config(
+    page_title="🏌️ 高爾夫BANK系統",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 # 其餘 import
 import pandas as pd
