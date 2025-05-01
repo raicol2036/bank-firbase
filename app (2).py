@@ -106,11 +106,12 @@ hcp = front_hcp + back_hcp
 if mode == "主控操作端":
     # 使用不同的 key 確保不與查看端混淆
     players = st.multiselect(
-        "選擇參賽球員（最多4位）",
-        st.session_state.players,
-        max_selections=4,
-        key="main_selected_players"  # ✅ 改名避免 key 衝突
-    )
+    "選擇參賽球員（最多4位）",
+    st.session_state.players,
+    default=[],  # ✅ 加這行強制不要預選任何人
+    max_selections=4,
+    key="selected_players"
+)
 
     # 新增球員區
     with st.form("new_player_form"):
