@@ -102,41 +102,52 @@ par = front_par + back_par
 hcp = front_hcp + back_hcp
 
 # --- 球員設定 ---
-# --- 多選參賽球員（最多4位） ---
+# --- 多選參賽球員（最多4位）---
+# ✅ 关键修改1：添加独立session_state保存已选球员
+if "selected_players" not in st.session_state:
+    st.session_state.selected_players = []
+
 players = st.multiselect(
     "選擇參賽球員（最多4位）",
     st.session_state.players,
+    default=st.session_state.selected_players,  # ✅ 保留已选状态
     max_selections=4,
-    key="selected_players"  # ✅ 添加唯一key用於狀態保存
+    key="players_multiselect"
 )
-# 在球員選擇後添加驗證
+
+# ✅ 关键修改2：实时验证选择数量
 if len(players) > 4:
-    st.error("⚠️ 選擇球員數量超過限制！")
-    # 自動重置為前4個選擇
-    players = players[:4]
-    st.session_state.selected_players = players
+    # 自动截断并更新状态
+    st.session_state.selected_players = players[:4]
     st.experimental_rerun()
-# --- 新增球員（優化版）---
-with st.form("new_player_form"):
-    new = st.text_input("新增球員名稱")
+
+# 同步状态
+if players != st.session_state.selected_players:
+    st.session_state.selected_players = players
+
+# --- 新增球員（优化防冲突逻辑）---
+with st.form("new_player_form", clear_on_submit=True):  # ✅ 提交后自动清空输入框
+    new = st.text_input("新增球員名稱", key="new_player_input")
     submitted = st.form_submit_button("確認新增")
     
     if submitted:
-        if not new:
-            st.warning("⚠️ 請輸入球員名稱")
+        if not new.strip():
+            st.warning("⚠️ 球員名稱不能為空")
         elif new in st.session_state.players:
             st.warning(f"⚠️ 球員 {new} 已存在")
         else:
-            # 更新球員數據
+            # 更新全局球员列表
             st.session_state.players.append(new)
             pd.DataFrame({"name": st.session_state.players}).to_csv(CSV_PATH, index=False)
             
-            # 清空輸入框但保留已選球員
-            st.session_state.new_player_input = ""  # ✅ 使用session_state控制輸入狀態
-            
-            # 顯示成功訊息但不用rerun
+            # ✅ 关键修改3：不重置已选球员
             st.success(f"✅ 已新增球員 {new} 至資料庫")
-            st.experimental_rerun()  # 🔁 需要重新整理以更新multiselect選項
+            st.rerun()  # 安全刷新以更新multiselect选项
+
+# ✅ 关键修改4：显示当前选择状态
+st.caption(f"已選擇 {len(players)}/4 位球員")
+if len(players) == 4:
+    st.info("ℹ️ 已達最大選擇人數，需移除球員後才能新增選擇")
 
 # 控制輸入框狀態
 if 'new_player_input' in st.session_state:
