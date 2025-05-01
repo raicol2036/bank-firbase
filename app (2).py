@@ -52,6 +52,61 @@ else:
 st.set_page_config(page_title="🏌️ 高爾夫BANK系統", layout="wide")
 st.title("🏌️ 高爾夫BANK系統")
 
+#-------
+# --- 根據網址參數，自動切換為查看端模式，並初始化 game_id ---
+query_params = st.query_params
+if "mode" in query_params and query_params["mode"] == "view":
+    st.session_state.mode = "隊員查看端"
+    game_id_param = query_params.get("game_id", "")
+    if isinstance(game_id_param, list):
+        game_id_param = game_id_param[0]
+    st.session_state.game_id = game_id_param
+
+# --- 模式預設為主控端 ---
+if "mode" not in st.session_state:
+    st.session_state.mode = "主控操作端"
+mode = st.session_state.mode
+
+# --- 查看端專用：從 Firebase 讀取資料 ---
+if mode == "隊員查看端":
+
+    if "firebase_initialized" not in st.session_state:
+        st.error("❌ Firebase 尚未初始化")
+        st.stop()
+
+    game_id = st.session_state.get("game_id", "")
+    if not game_id:
+        st.warning("⚠️ 查無 game_id，請確認網址是否帶有參數")
+        st.stop()
+
+    st.write(f"🔍 嘗試讀取比賽 `{game_id}` 資料...")  # debug log
+
+    doc_ref = st.session_state.db.collection("golf_games").document(game_id)
+    doc = doc_ref.get()
+
+    if not doc.exists:
+        st.error(f"❌ Firebase 中找不到比賽 `{game_id}`，請確認主控端已建立資料")
+        st.stop()
+
+    # ✅ 成功取出資料，解包為主程式可用變數
+    game_data = doc.to_dict()
+    players = game_data["players"]
+    scores = pd.DataFrame.from_dict(game_data["scores"], orient="index")
+    events = pd.DataFrame.from_dict(game_data["events"], orient="index")
+    running_points = game_data["points"]
+    current_titles = game_data.get("titles", {p: "" for p in players})
+    hole_logs = game_data["logs"]
+    completed = game_data["completed_holes"]
+    selected_course = game_data["course"]
+    front_area = game_data["front_area"]
+    back_area = game_data["back_area"]
+    bet_per_person = game_data["bet_per_person"]
+    par = game_data["par"]
+    hcp = game_data["hcp"]
+
+    st.success(f"✅ 成功讀取比賽 `{game_id}` 資料")
+
+
 # --- 根據網址參數自動切換查看端模式 ---
 query_params = st.query_params
 if "mode" in query_params and query_params["mode"] == "view":
