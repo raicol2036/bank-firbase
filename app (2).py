@@ -90,6 +90,7 @@ if len(players) == 0:
 
 handicaps = {p: st.number_input(f"{p} 差點", 0, 54, 0, key=f"hcp_{p}") for p in players}
 bet_per_person = st.number_input("單局賭金（每人）", 10, 1000, 100)
+
 # --- 初始化資料結構 ---
 scores = pd.DataFrame(index=players, columns=[f"第{i+1}洞" for i in range(18)])
 events = pd.DataFrame(index=players, columns=[f"第{i+1}洞" for i in range(18)])
@@ -101,6 +102,7 @@ running_points = {p: 0 for p in players}
 current_titles = {p: "" for p in players}
 hole_logs = []
 point_bank = 1
+game_id = "test_game_001"  # 建議後續加上自訂輸入或時間戳自動產生
 
 # --- 主流程 ---
 for i in range(18):
