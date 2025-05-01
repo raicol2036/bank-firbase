@@ -144,8 +144,6 @@ if "mode" not in st.session_state:
     st.session_state.mode = "主控操作端"
 mode = st.session_state.mode
 
-    game_data = doc.to_dict()
-
     # ✅ 將資料解包為主程式用變數（否則會報未定義錯）
     players = game_data["players"]
     scores = pd.DataFrame.from_dict(game_data["scores"], orient="index")
