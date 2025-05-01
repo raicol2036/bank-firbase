@@ -319,24 +319,29 @@ result = pd.DataFrame({
 }, index=players).sort_values("賭金結果", ascending=False)
 st.dataframe(result)
 
-# --- 查看端顯示 QR 碼 ---
-if mode == "隊員查看端" and game_id:
+# --- QR Code 生成 ---
+if (mode == "主控操作端" and "game_id" in st.session_state) or \
+   (mode == "隊員查看端" and "selected_course" in st.session_state):
+    
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=6,
-        border=2,
+        box_size=8 if mode == "主控操作端" else 6,
+        border=4
     )
-    qr.add_data(game_id)
-    qr.make(fit=True)
-
+    qr.add_data(st.session_state.game_id if mode == "主控操作端" else game_id)
+    
     img = qr.make_image(fill_color="darkgreen", back_color="white")
-    img_byte_arr = BytesIO()
-    img.save(img_byte_arr, format='PNG')
-    img_byte_arr.seek(0)
+    img_bytes = io.BytesIO()
+    img.save(img_bytes, format="PNG")
+    img_bytes.seek(0)
+    
+    st.image(img_bytes, width=200 if mode == "主控操作端" else 150,
+             caption="本場比賽QR碼" if mode == "主控操作端" else "快速加入碼")
 
-    st.markdown("---")
-    st.image(img_byte_arr, width=150, caption="本場比賽 QR 碼")
+# --- 自動刷新控制 ---
+if mode == "隊員查看端":
+    st.experimental_rerun(interval=10)  # 每10秒自動刷新
 
 # --- 洞別日誌顯示 ---
 st.subheader("📖 洞別說明 Log")
