@@ -52,6 +52,14 @@ else:
 st.set_page_config(page_title="🏌️ 高爾夫BANK系統", layout="wide")
 st.title("🏌️ 高爾夫BANK系統")
 
+# --- 根據網址參數自動切換查看端模式 ---
+query_params = st.query_params
+if "mode" in query_params and query_params["mode"] == "view":
+    st.session_state.mode = "隊員查看端"
+    if "game_id" not in st.session_state and "game_id" in query_params:
+        st.session_state.game_id = query_params["game_id"]
+
+
 # --- 模式設定 ---
 if "mode" not in st.session_state:
     st.session_state.mode = "主控操作端"
