@@ -184,7 +184,8 @@ current_titles = {p: "" for p in players}
 hole_logs = []
 point_bank = 1
 from datetime import datetime
-game_id = datetime.now().strftime("%Y%m%d%H%M%S")  # 时间戳格式時間戳自動產生
+if "game_id" not in st.session_state:
+    st.session_state.game_id = datetime.now().strftime("%Y%m%d%H%M%S")
 
 # --- 主流程 ---
 for i in range(18):
