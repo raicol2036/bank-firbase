@@ -101,66 +101,70 @@ back_par, back_hcp = get_course_info(selected_course, back_area)
 par = front_par + back_par
 hcp = front_hcp + back_hcp
 
-# --- 球員設定區塊 ---
-
-# --- 球員設定區塊（主控操作端）---
+ --- 主控端球員管理 ---
 if mode == "主控操作端":
-    # ✅ 初始化球员选择状态
+    # 狀態初始化
     if "selected_players" not in st.session_state:
         st.session_state.selected_players = []
-
-    # ✅ 使用回调函数强制控制选择数量
-    def enforce_max_selection():
-        current_selection = st.session_state.multiselect_players
-        if len(current_selection) > 4:
-            # 自动截断到前4人并更新状态
-            st.session_state.selected_players = current_selection[:4]
-            st.experimental_rerun()
-
-    # ✅ 改造后的multiselect组件
-    players = st.multiselect(
-        "選擇參賽球員（最多4位）",
-        st.session_state.players,
-        default=st.session_state.selected_players,
-        key="multiselect_players",
-        on_change=enforce_max_selection  # ✅ 绑定数量控制回调
-    )
-
-    # ✅ 实时显示选择状态
-    st.markdown(f"""
-    <div style="color: #666; margin-top: -10px;">
-        已選擇 {len(players)}/4 位球員
-    </div>
-    """, unsafe_allow_html=True)
-
-    # ✅ 提交时强制验证
-    if len(players) > 4:
-        st.error("⚠️ 選擇人數超過限制！")
-        st.session_state.selected_players = players[:4]
-        st.experimental_rerun()
-
-    # 同步最新选择状态
-    st.session_state.selected_players = players
-
-    # --- 新增球員表单（优化版）---
-    with st.form("new_player_form", clear_on_submit=True):
-        new = st.text_input("新增球員名稱", key="new_player_input")
-        submitted = st.form_submit_button("確認新增")
+    
+    # 球員選擇組件
+    with st.container(border=True):
+        st.subheader("球員管理")
+        col1, col2 = st.columns([3, 1])
         
-        if submitted:
-            if not new.strip():
-                st.warning("⚠️ 名稱不能為空")
-            elif new in st.session_state.players:
-                st.warning(f"⚠️ {new} 已存在")
+        # 球員多選組件
+        def update_selection():
+            current = st.session_state.player_selector
+            if len(current) > 4:
+                st.session_state.selected_players = current[:4]
+                st.rerun()
             else:
-                # 更新全局列表（保留已选球员）
-                st.session_state.players.append(new)
+                st.session_state.selected_players = current
+        
+        players = st.multiselect(
+            "選擇參賽球員（最多4位）",
+            st.session_state.players,
+            default=st.session_state.selected_players,
+            key="player_selector",
+            on_change=update_selection
+        )
+        
+        # 實時顯示選擇狀態
+        with col2:
+            st.metric("已選球員", f"{len(players)}/4")
+            if len(players) == 4:
+                st.info("已達人數上限")
+
+    # 新增球員表單
+    with st.form("new_player_form", clear_on_submit=True):
+        new_name = st.text_input("新增球員名稱", key="new_player_name")
+        if st.form_submit_button("確認新增"):
+            if not new_name.strip():
+                st.warning("⚠️ 名稱不能為空")
+            elif new_name in st.session_state.players:
+                st.warning(f"⚠️ {new_name} 已存在")
+            else:
+                # 原子化更新操作
+                st.session_state.players.append(new_name)
                 pd.DataFrame({"name": st.session_state.players}).to_csv(CSV_PATH, index=False)
-                st.success(f"✅ 已新增 {new}")
+                st.success(f"✅ 已新增 {new_name}")
                 st.rerun()
 
-    # ✅ 玩家数量验证（必须放在最后）
-    if len(players) == 0:
+    # 移除球員功能
+    if players:
+        with st.expander("🗑️ 移除球員"):
+            remove_target = st.selectbox("選擇要移除的球員", players)
+            if st.button(f"移除 {remove_target}"):
+                if remove_target in st.session_state.players:
+                    st.session_state.players.remove(remove_target)
+                if remove_target in st.session_state.selected_players:
+                    st.session_state.selected_players.remove(remove_target)
+                pd.DataFrame({"name": st.session_state.players}).to_csv(CSV_PATH, index=False)
+                st.success(f"✅ 已移除 {remove_target}")
+                st.rerun()
+
+    # 球員數量驗證
+    if not players:
         st.warning("⚠️ 請選擇至少一位球員")
         st.stop()
 
