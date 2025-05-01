@@ -102,15 +102,20 @@ par = front_par + back_par
 hcp = front_hcp + back_hcp
 
 # --- 球員設定 ---
+# --- 多選參賽球員（限制最多 4 位） ---
 players = st.multiselect("選擇參賽球員（最多4位）", st.session_state.players, max_selections=4)
 
-new = st.text_input("新增球員")
+# --- 新增球員（僅新增到資料庫，不自動加入多選） ---
+new = st.text_input("新增球員名稱")
 if new:
-    if new not in st.session_state.players:
+    if new in st.session_state.players:
+        st.warning(f"⚠️ 球員 {new} 已存在")
+    else:
         st.session_state.players.append(new)
         pd.DataFrame({"name": st.session_state.players}).to_csv(CSV_PATH, index=False)
         st.success(f"✅ 已新增球員 {new} 至資料庫")
-    # ✅ 不要強制加入 players，避免觸發 max_selections 限制
+        st.experimental_rerun()  # 🔁 重新刷新畫面讓新球員出現在多選欄位中
+
 
 if len(players) == 0:
     st.warning("⚠️ 請先選擇至少一位球員")
