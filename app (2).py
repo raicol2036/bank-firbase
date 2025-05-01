@@ -101,6 +101,10 @@ back_par, back_hcp = get_course_info(selected_course, back_area)
 par = front_par + back_par
 hcp = front_hcp + back_hcp
 
+# --- 強制檢查是否有超過 4 人預選，有就清除，避免報錯 ---
+if "selected_players" in st.session_state:
+    if len(st.session_state.selected_players) > 4:
+        del st.session_state.selected_players
 # --- 球員設定 ---
 # --- 多選參賽球員（最多4位） ---
 players = st.multiselect(
