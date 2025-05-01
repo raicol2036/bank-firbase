@@ -104,15 +104,15 @@ hcp = front_hcp + back_hcp
 # --- 球員設定區塊 ---
 
 if mode == "主控操作端":
-    # --- 多選參賽球員（最多4位） ---
+    # 使用不同的 key 確保不與查看端混淆
     players = st.multiselect(
         "選擇參賽球員（最多4位）",
         st.session_state.players,
         max_selections=4,
-        key="selected_players"
+        key="main_selected_players"  # ✅ 改名避免 key 衝突
     )
 
-    # --- 新增球員 ---
+    # 新增球員區
     with st.form("new_player_form"):
         new = st.text_input("新增球員名稱")
         submitted = st.form_submit_button("確認新增")
@@ -126,11 +126,15 @@ if mode == "主控操作端":
                 st.session_state.players.append(new)
                 pd.DataFrame({"name": st.session_state.players}).to_csv(CSV_PATH, index=False)
                 st.success(f"✅ 已新增球員 {new} 至資料庫")
-                st.experimental_rerun()  # 🔁 更新多選清單
+                st.experimental_rerun()
 
 elif mode == "隊員查看端":
-    # 🔁 從 Firebase 取得的玩家資料直接顯示（不使用 multiselect）
-    players = game_data["players"]
+    # 查看端直接從 Firebase 同步，不觸發 multiselect
+    if "players" in game_data:
+        players = game_data["players"]
+    else:
+        st.error("⚠️ 從 Firebase 未能正確取得玩家資料")
+        st.stop()
     st.markdown("👥 本場參賽球員：")
     st.markdown(", ".join([f"**{p}**" for p in players]))
 
@@ -138,6 +142,7 @@ elif mode == "隊員查看端":
 if len(players) == 0:
     st.warning("⚠️ 請先選擇至少一位球員")
     st.stop()
+
 
 handicaps = {p: st.number_input(f"{p} 差點", 0, 54, 0, key=f"hcp_{p}") for p in players}
 bet_per_person = st.number_input("單局賭金（每人）", 100, 1000, 100)
