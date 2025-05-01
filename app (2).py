@@ -266,6 +266,10 @@ hole_logs = []
 point_bank = 1
 
 from datetime import datetime
+import pytz
+
+tz = pytz.timezone("Asia/Taipei")
+
 import qrcode
 import io
 
@@ -278,7 +282,7 @@ if (
     and not st.session_state.get("game_initialized")
 ):
     # 產生 YYMMDD_XX game_id
-    today_str = datetime.now().strftime("%y%m%d")
+    today_str = datetime.now(tz).strftime("%y%m%d")
     games_ref = st.session_state.db.collection("golf_games")
     same_day_docs = games_ref.stream()
     same_day_count = sum(1 for doc in same_day_docs if doc.id.startswith(today_str))
