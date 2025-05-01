@@ -270,39 +270,32 @@ st.dataframe(result)
 # =========================================
 # ✅ 新增：生成遊戲ID二維碼（正确缩进与注释格式）
 # =========================================
-if mode == "主控操作端":
-    # 生成QR Code
+# === 二维码生成部分修正 ===
+elif mode == "隊員查看端" and game_id:
+    # ✅ 正确缩进开始
+    # 隊員端顯示簡化版QR碼
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=10,
-        border=4,
+        box_size=6,
+        border=2,
     )
-    qr.add_data(st.session_state.game_id)
+    qr.add_data(game_id)
     qr.make(fit=True)
     
-    # 轉換為圖片
-    img = qr.make_image(fill_color="black", back_color="white")
-    
-    # 轉換為BytesIO以便在Streamlit顯示
+    img = qr.make_image(fill_color="darkgreen", back_color="white")
     img_byte_arr = io.BytesIO()
     img.save(img_byte_arr, format='PNG')
     img_byte_arr.seek(0)
     
-    # 顯示QR Code與說明
-    st.subheader("📲 遊戲加入二維碼")
-    col1, col2 = st.columns([1, 3])
-    with col1:
-        st.image(img_byte_arr, width=200)
-    with col2:
-        st.markdown(f"""
-        ### 掃描加入比賽
-        1. 打開手機相機對準二維碼
-        2. 點擊彈出的連結
-        3. 輸入遊戲ID: `{st.session_state.game_id}`
-        """)
-        
-elif mode == "隊員查看端" and game_id:
+    st.markdown("---")
+    st.image(img_byte_arr, width=150, caption="本場比賽QR碼")
+    # ✅ 正确缩进结束
+
+# --- 洞別日誌部分保持原位置 ---
+st.subheader("📖 洞別說明 Log")
+for line in hole_logs:
+    st.text(line)
 st.subheader("📖 洞別說明 Log")
 for line in hole_logs:
     st.text(line)
