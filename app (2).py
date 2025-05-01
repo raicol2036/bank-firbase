@@ -110,6 +110,8 @@ if new:
         st.session_state.players.append(new)
         pd.DataFrame({"name": st.session_state.players}).to_csv(CSV_PATH, index=False)
         st.success(f"✅ 已新增球員 {new} 至資料庫")
+    # ✅ 不要強制加入 players，避免觸發 max_selections 限制
+
     if new not in players and len(players) < 4:
         players.append(new)
 
