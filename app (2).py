@@ -277,40 +277,31 @@ running_points = {p: 0 for p in players}
 current_titles = {p: "" for p in players}
 hole_logs = []
 point_bank = 1
+
 from datetime import datetime
-if "game_id" not in st.session_state:
-    st.session_state.game_id = datetime.now().strftime("%Y%m%d%H%M%S")
-    
-    # ✅ 只在查看端呈現總表與 Log，並中止後續流程
-if mode == "隊員查看端":
-    st.subheader("📊 總結結果")
-    total_bet = bet_per_person * len(players)
-    result = pd.DataFrame({
-        "總點數": [running_points[p] for p in players],
-        "賭金結果": [running_points[p] * bet_per_person - completed * bet_per_person for p in players],
-        "頭銜": [current_titles[p] for p in players]
-    }, index=players).sort_values("賭金結果", ascending=False)
-    st.dataframe(result)
+import qrcode
+import io
 
-    st.subheader("📖 洞別說明 Log")
-    for line in hole_logs:
-        st.text(line)
-
-    st.stop()
-
-# ✅ 強化主控端：只有在選滿 4 位玩家後才初始化 Firebase 並產生 QR
+# ✅ 主控端：產生 game_id、初始化 Firebase、產生 QR Code
 if (
     mode == "主控操作端"
-    and "firebase_initialized" in st.session_state
-    and "game_id" in st.session_state
-    and "selected_players" in st.session_state
+    and st.session_state.get("firebase_initialized")
+    and st.session_state.get("selected_players")
     and len(st.session_state.selected_players) == 4
-    and "game_initialized" not in st.session_state
+    and not st.session_state.get("game_initialized")
 ):
-    players = st.session_state.selected_players
+    # 產生 YYMMDD_XX game_id
+    today_str = datetime.now().strftime("%y%m%d")
+    games_ref = st.session_state.db.collection("golf_games")
+    same_day_docs = games_ref.stream()
+    same_day_count = sum(1 for doc in same_day_docs if doc.id.startswith(today_str))
+    new_seq = same_day_count + 1
+    game_id = f"{today_str}_{new_seq:02d}"
+    st.session_state.game_id = game_id
 
-# 🔁 建立初始 Firebase 賽事資料
+    players = st.session_state.selected_players
     game_data = {
+        "created_date": today_str,
         "players": players,
         "scores": {p: {} for p in players},
         "events": {p: {} for p in players},
@@ -326,23 +317,21 @@ if (
         "completed_holes": 0
     }
 
-    st.session_state.db.collection("golf_games").document(st.session_state.game_id).set(game_data)
+    st.session_state.db.collection("golf_games").document(game_id).set(game_data)
     st.session_state.game_initialized = True
 
     st.success("✅ 賽事資料已寫入 Firebase")
-    st.write("🆔 賽事編號：", st.session_state.game_id)
+    st.write("🆔 賽事編號：", game_id)
     st.write("👥 玩家名單：", players)
 
-    # ✅ 顯示 QR code：只要 game 已初始化就會顯示，不受玩家欄位變動影響
-if mode == "主控操作端" and "game_initialized" in st.session_state:
-    # 重新產生 QR 圖（防止重整後變數不存在）
+    # 產生 QR code 並顯示
+    game_url = f"https://bank-firbase.streamlit.app/?mode=view&game_id={game_id}"
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
         box_size=8,
         border=4
     )
-    game_url = f"https://bank-firbase.streamlit.app/?mode=view&game_id={st.session_state.game_id}"
     qr.add_data(game_url)
     qr.make(fit=True)
 
@@ -351,8 +340,9 @@ if mode == "主控操作端" and "game_initialized" in st.session_state:
     img.save(img_bytes, format="PNG")
     img_bytes.seek(0)
 
-    st.image(img_bytes, width=180, caption="掃此查詢比賽")
-    st.markdown(f"**🆔 遊戲 ID： `{st.session_state.game_id}`**")
+    st.markdown("## 📲 比賽加入 QR Code")
+    st.image(img_bytes, width=180, caption="掃此加入比賽")
+    st.markdown(f"**🔐 遊戲 ID： `{game_id}`**")
     st.markdown("---")
 
 # --- 主流程 ---
