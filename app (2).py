@@ -319,27 +319,30 @@ result = pd.DataFrame({
 }, index=players).sort_values("賭金結果", ascending=False)
 st.dataframe(result)
 
-# --- QR Code 生成 ---
-if (mode == "主控操作端" and "game_id" in st.session_state) or \
-   (mode == "隊員查看端" and "selected_course" in st.session_state):
-    
+# --- QR Code 生成（僅主控端）---
+if mode == "主控操作端" and "game_id" in st.session_state:
+    # 生成 QR Code
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=8 if mode == "主控操作端" else 6,
+        box_size=8,
         border=4
     )
-    qr.add_data(st.session_state.game_id if mode == "主控操作端" else game_id)
+    qr.add_data(st.session_state.game_id)
+    qr.make(fit=True)
     
     img = qr.make_image(fill_color="darkgreen", back_color="white")
     img_bytes = io.BytesIO()
     img.save(img_bytes, format="PNG")
     img_bytes.seek(0)
     
-    st.image(img_bytes, width=200 if mode == "主控操作端" else 150,
-             caption="本場比賽QR碼" if mode == "主控操作端" else "快速加入碼")
+    # 顯示在主控端側邊欄
+    with st.sidebar:
+        st.subheader("📲 比賽加入碼")
+        st.image(img_bytes, width=200, caption="掃此加入比賽")
+        st.markdown(f"**遊戲ID:** `{st.session_state.game_id}`")
 
-# --- 自動刷新控制 ---
+# --- 自動刷新控制（僅隊員端）---
 if mode == "隊員查看端":
     st.experimental_rerun(interval=10)  # 每10秒自動刷新
 
