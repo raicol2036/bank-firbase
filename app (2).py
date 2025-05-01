@@ -326,7 +326,7 @@ if (
         box_size=8,
         border=4
     )
-    game_url = f"hhttps://bank-firbase.streamlit.app/?mode=view&game_id={st.session_state.game_id}"
+    game_url = f"https://bank-firbase.streamlit.app/?mode=view&game_id={st.session_state.game_id}"
     qr.add_data(game_url)
     qr.make(fit=True)
 
