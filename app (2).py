@@ -103,46 +103,66 @@ hcp = front_hcp + back_hcp
 
 # --- 球員設定區塊 ---
 
+# --- 球員設定區塊（主控操作端）---
 if mode == "主控操作端":
-    # 使用不同的 key 確保不與查看端混淆
+    # ✅ 初始化球员选择状态
+    if "selected_players" not in st.session_state:
+        st.session_state.selected_players = []
+
+    # ✅ 使用回调函数强制控制选择数量
+    def enforce_max_selection():
+        current_selection = st.session_state.multiselect_players
+        if len(current_selection) > 4:
+            # 自动截断到前4人并更新状态
+            st.session_state.selected_players = current_selection[:4]
+            st.experimental_rerun()
+
+    # ✅ 改造后的multiselect组件
     players = st.multiselect(
-    "選擇參賽球員（最多4位）",
-    st.session_state.players,
-    default=[],  # ✅ 加這行強制不要預選任何人
-    max_selections=4,
-    key="selected_players"
-)
+        "選擇參賽球員（最多4位）",
+        st.session_state.players,
+        default=st.session_state.selected_players,
+        key="multiselect_players",
+        on_change=enforce_max_selection  # ✅ 绑定数量控制回调
+    )
 
-    # 新增球員區
-    with st.form("new_player_form"):
-        new = st.text_input("新增球員名稱")
+    # ✅ 实时显示选择状态
+    st.markdown(f"""
+    <div style="color: #666; margin-top: -10px;">
+        已選擇 {len(players)}/4 位球員
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ✅ 提交时强制验证
+    if len(players) > 4:
+        st.error("⚠️ 選擇人數超過限制！")
+        st.session_state.selected_players = players[:4]
+        st.experimental_rerun()
+
+    # 同步最新选择状态
+    st.session_state.selected_players = players
+
+    # --- 新增球員表单（优化版）---
+    with st.form("new_player_form", clear_on_submit=True):
+        new = st.text_input("新增球員名稱", key="new_player_input")
         submitted = st.form_submit_button("確認新增")
-
+        
         if submitted:
-            if not new:
-                st.warning("⚠️ 請輸入球員名稱")
+            if not new.strip():
+                st.warning("⚠️ 名稱不能為空")
             elif new in st.session_state.players:
-                st.warning(f"⚠️ 球員 {new} 已存在")
+                st.warning(f"⚠️ {new} 已存在")
             else:
+                # 更新全局列表（保留已选球员）
                 st.session_state.players.append(new)
                 pd.DataFrame({"name": st.session_state.players}).to_csv(CSV_PATH, index=False)
-                st.success(f"✅ 已新增球員 {new} 至資料庫")
-                st.experimental_rerun()
+                st.success(f"✅ 已新增 {new}")
+                st.rerun()
 
-elif mode == "隊員查看端":
-    # 查看端直接從 Firebase 同步，不觸發 multiselect
-    if "players" in game_data:
-        players = game_data["players"]
-    else:
-        st.error("⚠️ 從 Firebase 未能正確取得玩家資料")
+    # ✅ 玩家数量验证（必须放在最后）
+    if len(players) == 0:
+        st.warning("⚠️ 請選擇至少一位球員")
         st.stop()
-    st.markdown("👥 本場參賽球員：")
-    st.markdown(", ".join([f"**{p}**" for p in players]))
-
-# --- 玩家未選擇時停止 ---
-if len(players) == 0:
-    st.warning("⚠️ 請先選擇至少一位球員")
-    st.stop()
 
 
 handicaps = {p: st.number_input(f"{p} 差點", 0, 54, 0, key=f"hcp_{p}") for p in players}
