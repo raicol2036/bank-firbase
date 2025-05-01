@@ -340,11 +340,22 @@ if mode == "主控操作端" and "game_initialized" in st.session_state:
 
 
 # --- 主流程 ---
-for i in range(18):
-    if mode == "隊員查看端" and not (f"confirm_{i}" in st.session_state and st.session_state[f"confirm_{i}"]):
-        continue
+# 🧾 查看端簡化畫面，只顯示總表與 log
+if mode == "隊員查看端":
+    st.subheader("📊 總結結果")
+    total_bet = bet_per_person * len(players)
+    result = pd.DataFrame({
+        "總點數": [running_points[p] for p in players],
+        "賭金結果": [running_points[p] * bet_per_person - completed * bet_per_person for p in players],
+        "頭銜": [current_titles[p] for p in players]
+    }, index=players).sort_values("賭金結果", ascending=False)
+    st.dataframe(result)
 
-    st.subheader(f"第{i+1}洞 (Par {par[i]} / HCP {hcp[i]})")
+    st.subheader("📖 洞別說明 Log")
+    for line in hole_logs:
+        st.text(line)
+
+    st.stop()  # ✅ 中止查看端後續主流程（避免顯示輸入欄位）
 
     if mode == "主控操作端":
         cols = st.columns(len(players))
