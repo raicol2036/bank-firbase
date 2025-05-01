@@ -414,10 +414,12 @@ result = pd.DataFrame({
 }, index=players).sort_values("賭金結果", ascending=False)
 st.dataframe(result)
 #-------------
+# ✅ 當選滿 4 人後立即寫入 Firebase（只寫一次）
 if (
     mode == "主控操作端"
+    and "firebase_initialized" in st.session_state
     and "game_id" in st.session_state
-    and len(players) == 4  # ⚠️ 確保選滿人
+    and len(players) == 4
     and "game_initialized" not in st.session_state
 ):
     game_data = {
@@ -437,8 +439,11 @@ if (
     }
     st.session_state.db.collection("golf_games").document(st.session_state.game_id).set(game_data)
     st.session_state.game_initialized = True
+
     st.success("✅ 賽事資料已寫入 Firebase")
     st.write("🆔 賽事編號：", st.session_state.game_id)
+    st.write("👥 玩家名單：", players)
+
 
 # --- QR Code 生成（僅主控端）---
 # ✅ 確保已選滿 4 位球員再初始化 Firebase
