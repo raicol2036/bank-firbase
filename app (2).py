@@ -280,6 +280,65 @@ point_bank = 1
 from datetime import datetime
 if "game_id" not in st.session_state:
     st.session_state.game_id = datetime.now().strftime("%Y%m%d%H%M%S")
+#---------
+# ✅ 強化主控端：只有在選滿 4 位玩家後才初始化 Firebase 並產生 QR
+if (
+    mode == "主控操作端"
+    and "firebase_initialized" in st.session_state
+    and "game_id" in st.session_state
+    and "selected_players" in st.session_state
+    and len(st.session_state.selected_players) == 4
+    and "game_initialized" not in st.session_state
+):
+    players = st.session_state.selected_players
+
+    # 🔁 建立初始 Firebase 賽事資料
+    game_data = {
+        "players": players,
+        "scores": {p: {} for p in players},
+        "events": {p: {} for p in players},
+        "points": {p: 0 for p in players},
+        "titles": {p: "" for p in players},
+        "logs": [],
+        "par": par,
+        "hcp": hcp,
+        "course": selected_course,
+        "front_area": front_area,
+        "back_area": back_area,
+        "bet_per_person": bet_per_person,
+        "completed_holes": 0
+    }
+
+    st.session_state.db.collection("golf_games").document(st.session_state.game_id).set(game_data)
+    st.session_state.game_initialized = True
+
+    st.success("✅ 賽事資料已寫入 Firebase")
+    st.write("🆔 賽事編號：", st.session_state.game_id)
+    st.write("👥 玩家名單：", players)
+
+    # 📸 產生 QR code 供查看端掃描加入
+    import qrcode
+    import io
+
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=8,
+        border=4
+    )
+    game_url = f"https://your-streamlit-app-url/?mode=view&game_id={st.session_state.game_id}"
+    qr.add_data(game_url)
+    qr.make(fit=True)
+
+    img = qr.make_image(fill_color="darkgreen", back_color="white")
+    img_bytes = io.BytesIO()
+    img.save(img_bytes, format="PNG")
+    img_bytes.seek(0)
+
+    with st.sidebar:
+        st.subheader("📲 比賽加入碼")
+        st.image(img_bytes, width=200, caption="掃此加入比賽")
+        st.markdown(f"**遊戲ID:** `{st.session_state.game_id}`")
 
 # --- 主流程 ---
 for i in range(18):
@@ -414,58 +473,6 @@ result = pd.DataFrame({
 }, index=players).sort_values("賭金結果", ascending=False)
 st.dataframe(result)
 #-------------
-if (
-    mode == "主控操作端"
-    and "firebase_initialized" in st.session_state
-    and "game_id" in st.session_state
-    and len(st.session_state.selected_players) == 4
-    and "game_initialized" not in st.session_state
-):
-    players = st.session_state.selected_players  # <== 🔥 確保是最新選擇
-    game_data = {
-        "players": players,
-        "scores": {p: {} for p in players},
-        "events": {p: {} for p in players},
-        "points": {p: 0 for p in players},
-        "titles": {p: "" for p in players},
-        "logs": [],
-        "par": par,
-        "hcp": hcp,
-        "course": selected_course,
-        "front_area": front_area,
-        "back_area": back_area,
-        "bet_per_person": bet_per_person,
-        "completed_holes": 0
-    }
-    st.session_state.db.collection("golf_games").document(st.session_state.game_id).set(game_data)
-    st.session_state.game_initialized = True
-
-    st.success("✅ 賽事資料已寫入 Firebase")
-    st.write("🆔 賽事編號：", st.session_state.game_id)
-    st.write("👥 玩家名單：", players)
-#----------------
-
-    # ✅ QR Code 產生
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_L,
-        box_size=8,
-        border=4
-    )
-    game_url = f"https://bank-firbase.streamlit.app/?mode=view&game_id={st.session_state.game_id}"
-    qr.add_data(game_url)
-    qr.make(fit=True)
-
-    img = qr.make_image(fill_color="darkgreen", back_color="white")
-    img_bytes = io.BytesIO()
-    img.save(img_bytes, format="PNG")
-    img_bytes.seek(0)
-
-    # ✅ 顯示
-    with st.sidebar:
-        st.subheader("📲 比賽加入碼")
-        st.image(img_bytes, width=200, caption="掃此加入比賽")
-        st.markdown(f"**遊戲ID:** `{st.session_state.game_id}`")
 
 # --- 自動刷新控制（僅隊員端）---
 if mode == "隊員查看端":
