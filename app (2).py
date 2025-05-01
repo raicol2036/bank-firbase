@@ -101,7 +101,7 @@ back_par, back_hcp = get_course_info(selected_course, back_area)
 par = front_par + back_par
 hcp = front_hcp + back_hcp
 
- --- 主控端球員管理 ---
+ # --- 主控端球員管理 ---
 if mode == "主控操作端":
     # 狀態初始化
     if "selected_players" not in st.session_state:
