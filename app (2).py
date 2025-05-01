@@ -1,41 +1,58 @@
 import streamlit as st
-st.set_page_config(page_title="🏌️ 高爾夫BANK系統", layout="wide")  # ✅ 必須是第一個 Streamlit 指令
-
-# 其餘 import
 import pandas as pd
 import os
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-# ========== Firebase 初始化 ==========
-def initialize_firebase():
-    if "firebase_initialized" not in st.session_state:
-        try:
-            if not firebase_admin._apps:
-                # ✅ 將 st.secrets 的使用延遲到 set_page_config 之後
-                cred = credentials.Certificate({
-                    "type": st.secrets["firebase"]["type"],
-                    "project_id": st.secrets["firebase"]["project_id"],
-                    "private_key_id": st.secrets["firebase"]["private_key_id"],
-                    "private_key": st.secrets["firebase"]["private_key"].replace("\\n", "\n"),
-                    "client_email": st.secrets["firebase"]["client_email"],
-                    "client_id": st.secrets["firebase"]["client_id"],
-                    "auth_uri": st.secrets["firebase"]["auth_uri"],
-                    "token_uri": st.secrets["firebase"]["token_uri"],
-                    "auth_provider_x509_cert_url": st.secrets["firebase"]["auth_provider_x509_cert_url"],
-                    "client_x509_cert_url": st.secrets["firebase"]["client_x509_cert_url"]
-                })
-                firebase_admin.initialize_app(cred)
-            st.session_state.db = firestore.client()
-            st.session_state.firebase_initialized = True
-        except Exception as e:
-            st.error("❌ Firebase 初始化失敗，請確認 secrets 格式與欄位")
-            st.exception(e)
-            st.stop()
+if "firebase_initialized" not in st.session_state:
+    try:
+        if not firebase_admin._apps:  # ←✅ 關鍵：只有沒初始化過才做
+            cred = credentials.Certificate({
+                "type": st.secrets["firebase"]["type"],
+                "project_id": st.secrets["firebase"]["project_id"],
+                "private_key_id": st.secrets["firebase"]["private_key_id"],
+                "private_key": st.secrets["firebase"]["private_key"].replace("\\n", "\n"),
+                "client_email": st.secrets["firebase"]["client_email"],
+                "client_id": st.secrets["firebase"]["client_id"],
+                "auth_uri": st.secrets["firebase"]["auth_uri"],
+                "token_uri": st.secrets["firebase"]["token_uri"],
+                "auth_provider_x509_cert_url": st.secrets["firebase"]["auth_provider_x509_cert_url"],
+                "client_x509_cert_url": st.secrets["firebase"]["client_x509_cert_url"]
+            })
+            firebase_admin.initialize_app(cred)
 
-# ========== 主程式邏輯 ==========
-# 先設置頁面配置，再初始化 Firebase
-initialize_firebase()  # ✅ 延後到 set_page_config 之後執行
+        st.session_state.db = firestore.client()
+        st.session_state.firebase_initialized = True
+    except Exception as e:
+        st.error("❌ Firebase 初始化失敗，請確認 secrets 格式與欄位")
+        st.exception(e)
+        st.stop()
+
+
+# --- 初始化資料 ---
+CSV_PATH = "players.csv"
+COURSE_DB_PATH = "course_db.csv"
+
+if "players" not in st.session_state:
+    if os.path.exists(CSV_PATH):
+        df = pd.read_csv(CSV_PATH)
+        st.session_state.players = df["name"].dropna().tolist()
+    else:
+        st.session_state.players = []
+
+if os.path.exists(COURSE_DB_PATH):
+    course_df = pd.read_csv(COURSE_DB_PATH)
+else:
+    st.error("找不到 course_db.csv！請先準備好球場資料。")
+    st.stop()
+
+st.set_page_config(page_title="🏌️ 高爾夫BANK系統", layout="wide")
+st.title("🏌️ 高爾夫BANK系統")
+
+# --- 模式設定 ---
+if "mode" not in st.session_state:
+    st.session_state.mode = "主控操作端"
+mode = st.session_state.mode
 
 # --- 球場選擇 ---
 course_options = course_df["course_name"].unique().tolist()
@@ -73,7 +90,6 @@ if len(players) == 0:
 
 handicaps = {p: st.number_input(f"{p} 差點", 0, 54, 0, key=f"hcp_{p}") for p in players}
 bet_per_person = st.number_input("單局賭金（每人）", 10, 1000, 100)
-
 # --- 初始化資料結構 ---
 scores = pd.DataFrame(index=players, columns=[f"第{i+1}洞" for i in range(18)])
 events = pd.DataFrame(index=players, columns=[f"第{i+1}洞" for i in range(18)])
