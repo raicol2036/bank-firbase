@@ -201,28 +201,6 @@ point_bank = 1
 from datetime import datetime
 if "game_id" not in st.session_state:
     st.session_state.game_id = datetime.now().strftime("%Y%m%d%H%M%S")
-#----------
-if mode == "主控操作端" and "firebase_initialized" in st.session_state:
-    # 初始化空資料寫入 Firebase（僅一次）
-    if "game_initialized" not in st.session_state:
-        game_data = {
-            "players": players,
-            "scores": {p: {} for p in players},
-            "events": {p: {} for p in players},
-            "points": {p: 0 for p in players},
-            "titles": {p: "" for p in players},
-            "logs": [],
-            "par": par,
-            "hcp": hcp,
-            "course": selected_course,
-            "front_area": front_area,
-            "back_area": back_area,
-            "bet_per_person": bet_per_person,
-            "completed_holes": 0
-        }
-        st.session_state.db.collection("golf_games").document(st.session_state.game_id).set(game_data)
-        st.session_state.game_initialized = True
-        st.success("✅ 比賽資料已初始化上傳 Firebase")
 
 # --- 主流程 ---
 for i in range(18):
@@ -358,24 +336,46 @@ result = pd.DataFrame({
 st.dataframe(result)
 
 # --- QR Code 生成（僅主控端）---
+# --- QR Code 生成（僅主控端）---
 if mode == "主控操作端" and "game_id" in st.session_state:
-    # 生成 QR Code
+
+    # ✅ 立即初始化 Firebase 資料（讓掃碼查看端找得到）
+    if "game_initialized" not in st.session_state:
+        game_data = {
+            "players": players,
+            "scores": {p: {} for p in players},
+            "events": {p: {} for p in players},
+            "points": {p: 0 for p in players},
+            "titles": {p: "" for p in players},
+            "logs": [],
+            "par": par,
+            "hcp": hcp,
+            "course": selected_course,
+            "front_area": front_area,
+            "back_area": back_area,
+            "bet_per_person": bet_per_person,
+            "completed_holes": 0
+        }
+        st.session_state.db.collection("golf_games").document(st.session_state.game_id).set(game_data)
+        st.session_state.game_initialized = True
+
+    # ✅ QR Code 產生
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
         box_size=8,
         border=4
     )
-    game_url = f"https://bank-firbase.streamlit.app/?mode=view&game_id={st.session_state.game_id}"
+    game_url = f"https://your-url/?mode=view&game_id={st.session_state.game_id}"
     qr.add_data(game_url)
     qr.make(fit=True)
-    
+
     img = qr.make_image(fill_color="darkgreen", back_color="white")
     img_bytes = io.BytesIO()
     img.save(img_bytes, format="PNG")
     img_bytes.seek(0)
-    
-    # 顯示在主控端側邊欄
+
+    # ✅ 顯示
     with st.sidebar:
         st.subheader("📲 比賽加入碼")
         st.image(img_bytes, width=200, caption="掃此加入比賽")
