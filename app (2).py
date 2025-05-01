@@ -244,19 +244,6 @@ if mode == "主控操作端":
                 st.success(f"✅ 已新增 {new_name}")
                 st.rerun()
 
-    # 移除球員功能
-    if players:
-        with st.expander("🗑️ 移除球員"):
-            remove_target = st.selectbox("選擇要移除的球員", players)
-            if st.button(f"移除 {remove_target}"):
-                if remove_target in st.session_state.players:
-                    st.session_state.players.remove(remove_target)
-                if remove_target in st.session_state.selected_players:
-                    st.session_state.selected_players.remove(remove_target)
-                pd.DataFrame({"name": st.session_state.players}).to_csv(CSV_PATH, index=False)
-                st.success(f"✅ 已移除 {remove_target}")
-                st.rerun()
-
     # 球員數量驗證
     if not players:
         st.warning("⚠️ 請選擇至少一位球員")
