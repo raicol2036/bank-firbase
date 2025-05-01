@@ -49,7 +49,7 @@ else:
     st.error("找不到 course_db.csv！請先準備好球場資料。")
     st.stop()
 
-st.set_page_config(page_title="🏌️ 高爾夫BANK系統", layout="wide")
+st.set_page_config(page_title="🏌️ 高爾夫BANK系統", layout="entered")
 st.title("🏌️ 高爾夫BANK系統")
 
 #-------
@@ -337,7 +337,7 @@ if (
 
     # ✅ 顯示 QR code 在主畫面上方
 st.markdown("## 📲 比賽加入 QR Code")
-st.image(img_bytes, width=200, caption="掃此加入比賽")
+st.image(img_bytes, width=180, caption="掃此加入比賽")
 st.markdown(f"**🆔 遊戲 ID： `{st.session_state.game_id}`**")
 st.markdown("---")
 
