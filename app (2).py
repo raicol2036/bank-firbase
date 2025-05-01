@@ -113,7 +113,6 @@ if new:
     # ✅ 不要強制加入 players，避免觸發 max_selections 限制
 
     if new not in players and len(players) < 4:
-        players.append(new)
 
 if len(players) == 0:
     st.warning("⚠️ 請先選擇至少一位球員")
