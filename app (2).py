@@ -109,7 +109,13 @@ players = st.multiselect(
     max_selections=4,
     key="selected_players"  # ✅ 添加唯一key用於狀態保存
 )
-
+# 在球員選擇後添加驗證
+if len(players) > 4:
+    st.error("⚠️ 選擇球員數量超過限制！")
+    # 自動重置為前4個選擇
+    players = players[:4]
+    st.session_state.selected_players = players
+    st.experimental_rerun()
 # --- 新增球員（優化版）---
 with st.form("new_player_form"):
     new = st.text_input("新增球員名稱")
