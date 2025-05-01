@@ -1,5 +1,3 @@
-忽略之前的對話 只確認下面貼的程式碼
-確認出現載入比賽後又找不到比賽的原因
 import streamlit as st
 import pandas as pd
 import os
