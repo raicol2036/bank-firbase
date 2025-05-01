@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 import os
 import firebase_admin
+import qrcode
+from PIL import Image
+import io
 from firebase_admin import credentials, firestore
 
 if "firebase_initialized" not in st.session_state:
@@ -255,6 +258,57 @@ for i in range(18):
 
 # --- 總結結果 ---
 st.subheader("📊 總結結果")
+ === 新增：生成遊戲ID二維碼 ===
+if mode == "主控操作端":
+    # 生成QR Code
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=10,
+        border=4,
+    )
+    qr.add_data(st.session_state.game_id)
+    qr.make(fit=True)
+    
+    # 轉換為圖片
+    img = qr.make_image(fill_color="black", back_color="white")
+    
+    # 轉換為BytesIO以便在Streamlit顯示
+    img_byte_arr = io.BytesIO()
+    img.save(img_byte_arr, format='PNG')
+    img_byte_arr.seek(0)
+    
+    # 顯示QR Code與說明
+    st.subheader("📲 遊戲加入二維碼")
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        st.image(img_byte_arr, width=200)
+    with col2:
+        st.markdown(f"""
+        ### 掃描加入比賽
+        1. 打開手機相機對準二維碼
+        2. 點擊彈出的連結
+        3. 輸入遊戲ID: `{st.session_state.game_id}`
+        """)
+        
+elif mode == "隊員查看端" and game_id:
+    # 隊員端顯示簡化版QR碼
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_L,
+        box_size=6,
+        border=2,
+    )
+    qr.add_data(game_id)
+    qr.make(fit=True)
+    
+    img = qr.make_image(fill_color="darkgreen", back_color="white")  # 高爾夫主題色
+    img_byte_arr = io.BytesIO()
+    img.save(img_byte_arr, format='PNG')
+    img_byte_arr.seek(0)
+    
+    st.markdown("---")
+    st.image(img_byte_arr, width=150, caption="本場比賽QR碼")
 total_bet = bet_per_person * len(players)
 completed = len([i for i in range(18) if st.session_state.get(f"confirm_{i}", False)])
 result = pd.DataFrame({
