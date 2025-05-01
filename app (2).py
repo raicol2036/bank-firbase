@@ -1,6 +1,8 @@
+import streamlit as st
+st.set_page_config(page_title="🏌️ 高爾夫BANK系統", layout="wide")  # ✅ 必須是第一個 Streamlit 指令
 
-st.set_page_config(page_title="🏌️ 高爾夫BANK系統", layout="wide")  # 必須放在第一個！
-import streamlit as stimport pandas as pd
+# 其餘 import
+import pandas as pd
 import os
 import firebase_admin
 from firebase_admin import credentials, firestore
