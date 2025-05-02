@@ -514,18 +514,18 @@ db.collection('games').document(game_id).update({
 # ✅ 日誌記錄
 penalty_info = [f"{p} 扣 {event_penalties[p]}點" for p in players if event_penalties[p] > 0]    
 penalty_summary = "｜".join(penalty_info) if penalty_info else ""
-    if len(winners) == 1:
-        bird_icon = " 🐦" if is_birdy else ""
-        hole_log = f"🏆 第{i+1}洞勝者：{w}{bird_icon}（+{gain_points}點）"
-        if penalty_summary:
-            hole_log += f"｜{penalty_summary}"
-        if birdie_bonus:
-            hole_log += f"｜Birdie 奪得 {birdie_bonus}點"
-        else:
-            hole_log = f"⚖️ 第{i+1}洞平手"
-        if penalty_summary:
-            hole_log += f"｜{penalty_summary}"
-            hole_log += f"（下洞累積 {point_bank}點）"
+if len(winners) == 1:
+    bird_icon = " 🐦" if is_birdy else ""
+    hole_log = f"🏆 第{i+1}洞勝者：{w}{bird_icon}（+{gain_points}點）"
+    if penalty_summary:
+        hole_log += f"｜{penalty_summary}"
+    if birdie_bonus:
+        hole_log += f"｜Birdie 奪得 {birdie_bonus}點"
+    else:
+        hole_log = f"⚖️ 第{i+1}洞平手"
+    if penalty_summary:
+        hole_log += f"｜{penalty_summary}"
+        hole_log += f"（下洞累積 {point_bank}點）"
 
         hole_logs.append(hole_log)
         st.markdown(hole_log)
