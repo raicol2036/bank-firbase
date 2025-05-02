@@ -381,9 +381,9 @@ for i in range(18):
         cols = st.columns(len(players))
         for j, p in enumerate(players):
             with cols[j]:
-                if current_titles[p] == "SuperRich":
+                if current_titles[p] == "SuperRich Man":
                     st.markdown("👑 **Super Rich Man**")
-                elif current_titles[p] == "Rich":
+                elif current_titles[p] == "Rich Man":
                     st.markdown("🏆 **Rich Man**")
                 scores.loc[p, f"第{i+1}洞"] = st.number_input(f"{p} 桿數（{running_points[p]} 點）", 1, 15, par[i], key=f"score_{p}_{i}")
                 selected_display = st.multiselect(f"{p} 事件", event_opts_display, key=f"event_{p}_{i}")
@@ -406,9 +406,9 @@ for i in range(18):
         for p in players:
             acts = evt[p] if isinstance(evt[p], list) else []
             pen = 0
-            if current_titles[p] in ["Rich", "SuperRich"]:
+            if current_titles[p] in ["Rich Man", "SuperRich Man"]:
                 pen = sum(1 for act in acts if act in penalty_keywords)
-                if current_titles[p] == "SuperRich" and "par_on" in acts:
+                if current_titles[p] == "SuperRich Man" and "par_on" in acts:
                     pen += 1
                 pen = min(pen, 3)
             running_points[p] -= pen
