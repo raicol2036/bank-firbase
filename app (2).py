@@ -408,7 +408,7 @@ for i in range(18):
           continue  # ❌ 錯誤：不在迴圈內，會出現 SyntaxError
 
 
-        if f"confirm_{i}" in st.session_state and st.session_state[f"confirm_{i}"]:
+    if f"confirm_{i}" in st.session_state and st.session_state[f"confirm_{i}"]:
         raw = scores[f"第{i+1}洞"]
         evt = events[f"第{i+1}洞"]
         start_of_hole_bank = point_bank
