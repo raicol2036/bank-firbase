@@ -360,7 +360,6 @@ if (
 
     st.success("✅ 賽事資料已寫入 Firebase")
     st.write("🆔 賽事編號：", game_id)
-    st.write("👥 玩家名單：", players)
 
     # 產生 QR code 並顯示
     game_url = f"https://bank-firbase.streamlit.app/?mode=view&game_id={game_id}"
