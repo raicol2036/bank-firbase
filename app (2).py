@@ -267,12 +267,6 @@ if mode == "主控操作端":
             key="player_selector",
             on_change=update_selection
         )
-        
-        # 實時顯示選擇狀態
-        with col2:
-            st.metric("已選球員", f"{len(players)}/4")
-            if len(players) == 4:
-                st.info("已達人數上限")
 
     # 新增球員表單
     with st.form("new_player_form", clear_on_submit=True):
