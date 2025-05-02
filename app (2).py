@@ -471,16 +471,12 @@ for i in range(18):
         for p in players:
         if current_titles[p] == "Super Rich Man" and running_points[p] <= 4:
             current_titles[p] = "Rich Man"
-
-        if current_titles[p] == "Rich Man" and running_points[p] == 0:
+        elif current_titles[p] == "Rich Man" and running_points[p] == 0:
             current_titles[p] = ""
-
-        if current_titles[p] == "" and running_points[p] >= 8:
+        elif current_titles[p] == "" and running_points[p] >= 8:
             current_titles[p] = "Super Rich Man"
-
-        if current_titles[p] == "" and 4 >= running_points[p] < 8:
+        elif current_titles[p] == "" and 4 <= running_points[p] < 8:
             current_titles[p] = "Rich Man"
-        
 
         # 日誌
         penalty_info = [f"{p} 扣 {event_penalties[p]}點" for p in players if event_penalties[p] > 0]
