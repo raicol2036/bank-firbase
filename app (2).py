@@ -486,13 +486,16 @@ for i in range(18):
 
     # ✅ 頭銜更新
     for p in players:
-        if current_titles[p] == "SuperRich" and running_points[p] <= 4:
-            current_titles[p] = "Rich"
-        elif current_titles[p] == "Rich" and running_points[p] == 0:
+        if current_titles[p] == "SuperRich":
+            if running_points[p] <= 4:
+                current_titles[p] = "Rich"
+    elif current_titles[p] == "Rich":
+        if running_points[p] == 0:
             current_titles[p] = ""
-        elif current_titles[p] == "" and running_points[p] >= 8:
+    else:
+        if running_points[p] >= 8:
             current_titles[p] = "SuperRich"
-        elif current_titles[p] == "" and running_points[p] >= 4:
+        elif running_points[p] >= 4:
             current_titles[p] = "Rich"
 
     # ✅ Firebase 更新
