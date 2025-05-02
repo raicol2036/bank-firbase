@@ -85,42 +85,38 @@ if mode == "隊員查看端":
             st.stop()
         st.session_state.game_id = game_id_param
 
-    # ✅ 避免重複讀取 Firebase（只讀一次）
-    if "game_data_loaded" not in st.session_state:
-        game_id = st.session_state.game_id
-        doc_ref = st.session_state.db.collection("golf_games").document(game_id)
-        doc = doc_ref.get()
+    game_id = st.session_state.game_id
+    doc_ref = st.session_state.db.collection("golf_games").document(game_id)
+    doc = doc_ref.get()
 
-        if not doc.exists:
-            st.error(f"❌ Firebase 中找不到比賽 `{game_id}`")
-            st.stop()
+    if not doc.exists:
+        st.error(f"❌ Firebase 中找不到比賽 `{game_id}`")
+        st.stop()
 
-        game_data = doc.to_dict()
-        st.session_state.players = game_data["players"]
-        st.session_state.scores = pd.DataFrame.from_dict(game_data["scores"], orient="index")
-        st.session_state.events = pd.DataFrame.from_dict(game_data["events"], orient="index")
-        st.session_state.running_points = game_data["points"]
-        st.session_state.current_titles = game_data.get("titles", {p: "" for p in game_data["players"]})
-        st.session_state.hole_logs = game_data["logs"]
-        st.session_state.completed = game_data["completed_holes"]
-        st.session_state.selected_course = game_data["course"]
-        st.session_state.front_area = game_data["front_area"]
-        st.session_state.back_area = game_data["back_area"]
-        st.session_state.bet_per_person = game_data["bet_per_person"]
-        st.session_state.par = game_data["par"]
-        st.session_state.hcp = game_data["hcp"]
+    game_data = doc.to_dict()
 
-        st.session_state.game_data_loaded = True
-        st.success(f"✅ 成功載入比賽 `{game_id}`")
-        st.rerun()  # 🔁 強制 rerun 讓資料轉為可用狀態
+    # ✅ 將資料解包為主程式變數
+    players = game_data["players"]
+    scores = pd.DataFrame.from_dict(game_data["scores"], orient="index")
+    events = pd.DataFrame.from_dict(game_data["events"], orient="index")
+    running_points = game_data["points"]
+    current_titles = game_data.get("titles", {p: "" for p in players})
+    hole_logs = game_data["logs"]
+    completed = game_data["completed_holes"]
+    selected_course = game_data["course"]
+    front_area = game_data["front_area"]
+    back_area = game_data["back_area"]
+    bet_per_person = game_data["bet_per_person"]
+    par = game_data["par"]
+    hcp = game_data["hcp"]
 
+    # ✅ 查詢端僅顯示總表與 Log
     st.subheader("📊 總結結果")
     total_bet = bet_per_person * len(players)
-    completed = len([i for i in range(18) if st.session_state.get(f"confirm_{i}", False)])
     result = pd.DataFrame({
-    "總點數": [running_points[p] for p in players],
-    "賭金結果": [running_points[p] * bet_per_person - completed * bet_per_person for p in players],
-    "頭銜": [current_titles[p] for p in players]
+        "總點數": [running_points[p] for p in players],
+        "賭金結果": [running_points[p] * bet_per_person - completed * bet_per_person for p in players],
+        "頭銜": [current_titles[p] for p in players]
     }, index=players).sort_values("賭金結果", ascending=False)
     st.dataframe(result)
 
@@ -128,7 +124,7 @@ if mode == "隊員查看端":
     for line in hole_logs:
         st.text(line)
 
-    st.stop()
+    st.stop()  # ✅ 中止查詢端後續主流程
 
     # ✅ 將狀態資料釋出為主程式變數
     players = st.session_state.players
