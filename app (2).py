@@ -41,6 +41,14 @@ if os.path.exists(COURSE_DB_PATH):
 else:
     st.error("找不到 course_db.csv！請先準備好球場資料。")
     st.stop()
+    # --- 載入球員資料 ---
+if "players" not in st.session_state:
+    if os.path.exists(CSV_PATH):
+        df = pd.read_csv(CSV_PATH)
+        st.session_state.players = df["name"].dropna().tolist()
+    else:
+        st.session_state.players = []  # 空名單
+
 
 st.set_page_config(page_title="🏌️ 高爾夫BANK系統", layout="centered")
 st.title("🏌️ 高爾夫BANK系統")
