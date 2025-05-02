@@ -376,9 +376,7 @@ if (
     img_bytes.seek(0)
 
 # 儲存至 session_state 供未來使用
-st.session_state.qr_bytes = img_bytes
-
-
+    st.session_state.qr_bytes = img_bytes
     st.image(img_bytes, width=180, caption="賽況查詢")
     st.markdown(f"**🔐 遊戲 ID： `{game_id}`**")
     st.markdown("---")
