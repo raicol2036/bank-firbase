@@ -471,8 +471,8 @@ for i in range(18):
                 hole_log += f"｜{penalty_summary}"
             point_bank = 1
         else:
-            add_this_hole = 1 + total_penalty_this_hole
-            bank_after_this_hole = start_of_hole_bank + add_this_hole
+            # 平手時累積點數（賭金 + 扣點）
+            point_bank = start_of_hole_bank + 1 + total_penalty_this_hole
             hole_log = f"⚖️ 第{i+1}洞平手{('｜' + penalty_summary) if penalty_summary else ''}（下洞累積 {bank_after_this_hole}點）"
             point_bank = bank_after_this_hole
 
