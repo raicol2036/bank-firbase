@@ -469,13 +469,18 @@ for i in range(18):
 
         # 計算新頭銜（延後至下一洞生效）
         for p in players:
-            pt = running_points[p]
-            if pt >= 8:
-                next_titles[p] = "Super Rich Man"
-            elif pt >= 4:
-                next_titles[p] = "Rich Man"
-            else:
-                next_titles[p] = ""
+        if current_titles[p] == "Super Rich Man" and running_points[p] <= 4:
+            current_titles[p] = "Rich Man"
+
+        if current_titles[p] == "Rich Man" and running_points[p] == 0:
+            current_titles[p] = ""
+
+        if current_titles[p] == "" and running_points[p] >= 8:
+            current_titles[p] = "Super Rich Man"
+
+        if current_titles[p] == "" and 4 >= running_points[p] < 8:
+            current_titles[p] = "Rich Man"
+        
 
         # 日誌
         penalty_info = [f"{p} 扣 {event_penalties[p]}點" for p in players if event_penalties[p] > 0]
