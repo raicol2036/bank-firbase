@@ -385,7 +385,8 @@ for i in range(18):
 
     # 從最新狀態提取
     current_titles = st.session_state.get("current_titles", {p: "" for p in players})
-    running_points = st.session_state.running_points
+    running_points = st.session_state.get("running_points", {p: 0 for p in players})
+    hole_logs = st.session_state.get("hole_logs", [])
 
     if mode == "主控操作端":
         cols = st.columns(len(players))
