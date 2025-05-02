@@ -484,21 +484,23 @@ for i in range(18):
     st.markdown(hole_log)
     hole_logs.append(hole_log)
 
-    # ✅ 頭銜更新
     # ✅ 頭銜更新（建議改寫成不使用 elif，避免語法錯）
 for p in players:
-    if current_titles[p] == "SuperRich" and running_points[p] <= 4:
-        current_titles[p] = "Rich"
+    if current_titles[p] == "SuperRich":
+        if running_points[p] <= 4:
+            current_titles[p] = "Rich"
 
-    if current_titles[p] == "Rich" and running_points[p] == 0:
-        current_titles[p] = ""
+    elif current_titles[p] == "Rich":
+        if running_points[p] >= 8:
+            current_titles[p] = "SuperRich"
+        elif running_points[p] == 0:
+            current_titles[p] = ""
 
-    if current_titles[p] == "" and running_points[p] >= 8:
-        current_titles[p] = "SuperRich"
-
-    if current_titles[p] == "" and 4 <= running_points[p] < 8:
-        current_titles[p] = "Rich"
-
+    elif current_titles[p] == "":
+        if running_points[p] >= 8:
+            current_titles[p] = "SuperRich"
+        elif running_points[p] >= 4:
+            current_titles[p] = "Rich"
 
     # ✅ Firebase 更新
     completed = len([k for k in range(18) if st.session_state.get(f"confirm_{k}", False)])
