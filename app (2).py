@@ -489,12 +489,12 @@ for i in range(18):
         if current_titles[p] == "SuperRich":
             if running_points[p] <= 4:
                 current_titles[p] = "Rich"
-    elif current_titles[p] == "Rich":
-        if running_points[p] == 0:
-            current_titles[p] = ""
-    else:
-        if running_points[p] >= 8:
-            current_titles[p] = "SuperRich"
+        elif current_titles[p] == "Rich":
+            if running_points[p] == 0:
+                current_titles[p] = ""
+        else:
+            if running_points[p] >= 8:
+                current_titles[p] = "SuperRich"
         elif running_points[p] >= 4:
             current_titles[p] = "Rich"
 
