@@ -111,6 +111,8 @@ if mode == "隊員查看端":
     hcp = game_data["hcp"]
 
 if mode == "隊員查看端":    
+    if st.button("🔄 重新整理資料"):
+        st.rerun()
     st.subheader("📊 總結結果")
     total_bet = bet_per_person * len(players)
     # ✅ 正確的 completed，直接使用 Firebase 中的已完成洞數
