@@ -376,9 +376,6 @@ for i in range(18):
         continue
 
     st.subheader(f"第{i+1}洞 (Par {par[i]} / HCP {hcp[i]})")
-    title_summary = "🥉 本洞頭銜：" + "｜".join([f"{p}：{current_titles.get(p, '無') or '無'}" for p in players])
-    st.markdown(title_summary)
-
 
     if mode == "主控操作端":
         cols = st.columns(len(players))
