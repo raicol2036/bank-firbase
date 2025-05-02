@@ -111,14 +111,14 @@ if mode == "隊員查看端":
     hcp = game_data["hcp"]
 
     if mode == "隊員查看端":
-    st.subheader("📊 總結結果")
-    point_value = bet_per_person * (len(players) - 1)
-    result = pd.DataFrame({
-        "總點數": [running_points[p] for p in players],
-        "賭金損益": [running_points[p] * point_value for p in players],
-        "頭銜": [current_titles[p] for p in players]
-    }, index=players).sort_values("賭金損益", ascending=False)
-    st.dataframe(result)
+        st.subheader("📊 總結結果")
+        point_value = bet_per_person * (len(players) - 1)
+        result = pd.DataFrame({
+            "總點數": [running_points[p] for p in players],
+            "賭金損益": [running_points[p] * point_value for p in players],
+            "頭銜": [current_titles[p] for p in players]
+        }, index=players).sort_values("賭金損益", ascending=False)
+        st.dataframe(result)
 
     st.subheader("📖 洞別說明 Log")
     for line in hole_logs:
