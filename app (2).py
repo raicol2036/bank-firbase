@@ -378,8 +378,7 @@ if (
     img.save(img_bytes, format="PNG")
     img_bytes.seek(0)
 
-    st.markdown("## 📲 比賽加入 QR Code")
-    st.image(img_bytes, width=180, caption="掃此加入比賽")
+    st.image(img_bytes, width=180, caption="賽況查詢")
     st.markdown(f"**🔐 遊戲 ID： `{game_id}`**")
     st.markdown("---")
 
