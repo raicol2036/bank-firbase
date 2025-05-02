@@ -455,11 +455,16 @@ for i in range(18):
             is_birdy = raw[w] <= par[i] - 1
             bird_icon = " 🐦" if is_birdy else ""
             gain_points = point_bank
-            if is_birdy:
-                for p in players:
-                    if p != w and running_points[p] > 0:
-                        running_points[p] -= 1
-                        gain_points += 1
+
+# Birdie 額外加點
+        if is_birdy:
+            for p in players:
+                if p != w and running_points[p] > 0:
+                    running_points[p] -= 1
+                    gain_points += 1
+
+# 加上所有人的扣點（含自己） -> 給勝者
+        gain_points += total_penalty_this_hole
             running_points[w] += gain_points
             hole_log = f"🏆 第{i+1}洞勝者：{w}{bird_icon}（取得+{gain_points}點）"
             if penalty_summary:
