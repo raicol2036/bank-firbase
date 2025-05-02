@@ -384,7 +384,7 @@ for i in range(18):
     st.subheader(f"第{i+1}洞 (Par {par[i]} / HCP {hcp[i]})")
 
     # 從最新狀態提取
-    current_titles = st.session_state.current_titles
+    current_titles = st.session_state.get("current_titles", {p: "" for p in players})
     running_points = st.session_state.running_points
 
     if mode == "主控操作端":
