@@ -377,22 +377,24 @@ if (
 # 2. 勝負 ➜ 更新頭銜 ➜ 事件扣點（順序正確）
 
 # --- 主流程 ---
+# ✅ Golf BANK 主流程：每洞邏輯（修正頭銜延遲生效、事件扣分、birdie加分、勝負邏輯）
+
+point_bank = 1
+next_titles = current_titles.copy()  # 下一洞才生效的頭銜
+
+event_penalties = {}
+
 for i in range(18):
     if mode == "隊員查看端" and not (f"confirm_{i}" in st.session_state and st.session_state[f"confirm_{i}"]):
         continue
 
     st.subheader(f"第{i+1}洞 (Par {par[i]} / HCP {hcp[i]})")
 
-    # 從最新狀態提取
-    current_titles = st.session_state.get("current_titles", {p: "" for p in players})
-    running_points = st.session_state.get("running_points", {p: 0 for p in players})
-    hole_logs = st.session_state.get("hole_logs", [])
-
     if mode == "主控操作端":
         cols = st.columns(len(players))
         for j, p in enumerate(players):
             with cols[j]:
-                if current_titles.get(p) == "SuperRich Man":
+                if current_titles.get(p) == "Super Rich Man":
                     st.markdown("👑 **Super Rich Man**")
                 elif current_titles.get(p) == "Rich Man":
                     st.markdown("🏆 **Rich Man**")
@@ -408,9 +410,8 @@ for i in range(18):
     if f"confirm_{i}" in st.session_state and st.session_state[f"confirm_{i}"]:
         raw = scores[f"第{i+1}洞"]
         evt = events[f"第{i+1}洞"]
-        start_of_hole_bank = point_bank
 
-        # ✅ 勝負判定
+        # 勝負判定
         victory_map = {}
         for p1 in players:
             p1_wins = 0
@@ -429,13 +430,13 @@ for i in range(18):
 
         winners = [p for p in players if victory_map[p] == len(players) - 1]
 
-        # ✅ 單一勝者加分
         penalty_pool = 0
         birdie_bonus = 0
+        gain_points = point_bank
+
         if len(winners) == 1:
             w = winners[0]
             is_birdy = raw[w] <= par[i] - 1
-            gain_points = point_bank
             if is_birdy:
                 for p in players:
                     if p != w and running_points[p] > 0:
@@ -445,92 +446,53 @@ for i in range(18):
             running_points[w] += gain_points
             point_bank = 1
         else:
-            point_bank += 1  # 平手累積
+            point_bank += 1
 
-        # ✅ 更新頭銜（先更新）
+        # 事件扣點（使用上一洞的 current_titles）
         for p in players:
-            if current_titles[p] == "Super Rich Man" and running_points[p] <= 4:
-                current_titles[p] = "Rich Man"
-            if current_titles[p] == "Rich Man" and running_points[p] == 0:
-                current_titles[p] = ""
-            if current_titles[p] == "" and running_points[p] >= 8:
-                current_titles[p] = "Super Rich Man"
-            if current_titles[p] == "" and 4 <= running_points[p] < 8:
-                current_titles[p] = "Rich Man"
+            acts = evt[p] if isinstance(evt[p], list) else []
+            pen = 0
+            if current_titles.get(p) in ["Rich Man", "Super Rich Man"]:
+                pen = sum(1 for act in acts if act in penalty_keywords)
+                if current_titles[p] == "Super Rich Man" and "par_on" in acts:
+                    pen += 1
+                pen = min(pen, 3)
+            running_points[p] -= pen
+            event_penalties[p] = pen
+            penalty_pool += pen
 
-        # ✅ 扣點（根據最新頭銜）
-        for i, title in enumerate(current_titles):
-            if title == "Rich Man":
-                running_points[i] -= event_penalty  # Rich Man 承受事件扣點
-                st.write(f"玩家{i+1} 事件懲罰 -{event_penalty} 分（Rich Man）")
-        # ... 其他事件邏輯 ...
+        # 計算新頭銜（延後至下一洞生效）
+        for p in players:
+            pt = running_points[p]
+            if pt >= 8:
+                next_titles[p] = "Super Rich Man"
+            elif pt >= 4:
+                next_titles[p] = "Rich Man"
+            else:
+                next_titles[p] = ""
 
-# Birdie 加分計算 (Birdie bonus calculation)
-        for i, score in enumerate(hole_scores):
-            if score <= birdie_threshold:  # 判定該玩家是否達成Birdie（此為範例條件）
-                running_points[i] += birdie_bonus
-                st.write(f"玩家{i+1} 達成 Birdie！額外獲得 {birdie_bonus} 分")
-        if playerA_score < playerB_score:
-            winner_index = 0
-        elif playerB_score < playerA_score:
-            winner_index = 1
+        # 日誌
+        penalty_info = [f"{p} 扣 {event_penalties[p]}點" for p in players if event_penalties[p] > 0]
+        penalty_summary = "｜".join(penalty_info) if penalty_info else ""
+
+        if len(winners) == 1:
+            bird_icon = " 🐦" if is_birdy else ""
+            hole_log = f"🏆 第{i+1}洞勝者：{w}{bird_icon}（+{gain_points}點）"
+            if penalty_summary:
+                hole_log += f"｜{penalty_summary}"
+            if birdie_bonus:
+                hole_log += f"｜Birdie 奪得 {birdie_bonus}點"
         else:
-            winner_index = None  # 平手
-
-if winner_index is not None:
-
-    # 勝者取得累積點數（本洞獎勵），此時事件扣點與Birdie加分皆已生效
-    running_points[winner_index] += carryover_points
-    st.write(f"玩家{winner_index+1} 獲得本洞勝利，取得 {carryover_points} 分")
-    carryover_points = 1  # 重置累積點數
-else:
-    # 平手處理：累積點數帶至下洞
-    carryover_points += 1
-    st.write(f"本洞平手，獎勵累積至下洞，共 {carryover_points} 分")
-
-# 頭銜更新 (Update titles after hole)
-# 調整：於洞局結束後才更新頭銜 (Rich Man / Super Rich Man)，並在下洞開始時才生效
-next_titles = current_titles.copy()  # 建立下一洞頭銜的暫存
-for i, points in enumerate(running_points):
-    if points >= super_rich_threshold:
-        next_titles[i] = "Super Rich Man"
-    elif points >= rich_threshold:
-        next_titles[i] = "Rich Man"
-    else:
-        next_titles[i] = None
-# 紀錄頭銜變化但於下洞才套用
-st.write(f"頭銜更新（下洞生效）：{next_titles}")
-
-# 儲存狀態到 Firebase 和 session_state 
-# 調整：使用 next_titles 更新目前頭銜並同步遠端資料庫
-st.session_state.current_titles = next_titles  # 將更新後的頭銜設為下洞的現行頭銜
-db.collection('games').document(game_id).update({
-    'current_titles': next_titles,
-    'running_points': running_points,
-    'carryover_points': carryover_points,
-    # ... 其他需要更新的欄位 ...
-})
-
-# ✅ 日誌記錄
-penalty_info = [f"{p} 扣 {event_penalties[p]}點" for p in players if event_penalties[p] > 0]    
-penalty_summary = "｜".join(penalty_info) if penalty_info else ""
-if len(winners) == 1:
-    bird_icon = " 🐦" if is_birdy else ""
-    hole_log = f"🏆 第{i+1}洞勝者：{w}{bird_icon}（+{gain_points}點）"
-    if penalty_summary:
-        hole_log += f"｜{penalty_summary}"
-    if birdie_bonus:
-        hole_log += f"｜Birdie 奪得 {birdie_bonus}點"
-    else:
-        hole_log = f"⚖️ 第{i+1}洞平手"
-    if penalty_summary:
-        hole_log += f"｜{penalty_summary}"
-        hole_log += f"（下洞累積 {point_bank}點）"
+            hole_log = f"⚖️ 第{i+1}洞平手"
+            if penalty_summary:
+                hole_log += f"｜{penalty_summary}"
+            hole_log += f"（下洞累積 {point_bank}點）"
 
         hole_logs.append(hole_log)
         st.markdown(hole_log)
 
-        # ✅ 寫入 Firebase
+        # 寫入 session 與 Firebase
+        current_titles = next_titles.copy()
         st.session_state.current_titles = current_titles
         st.session_state.running_points = running_points
         st.session_state.hole_logs = hole_logs
