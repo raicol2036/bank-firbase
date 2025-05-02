@@ -114,6 +114,20 @@ if mode == "隊員查看端":
         st.success(f"✅ 成功載入比賽 `{game_id}`")
         st.rerun()  # 🔁 強制 rerun 讓資料轉為可用狀態
 
+    st.subheader("📊 總結結果")
+    result = pd.DataFrame({
+        "總點數": [running_points[p] for p in players],
+        "賭金結果": [running_points[p] * bet_per_person - completed * bet_per_person for p in players],
+        "頭銜": [current_titles[p] for p in players]
+    }, index=players).sort_values("賭金結果", ascending=False)
+    st.dataframe(result)
+
+    st.subheader("📖 洞別說明 Log")
+    for line in hole_logs:
+        st.text(line)
+
+    st.stop()
+
     # ✅ 將狀態資料釋出為主程式變數
     players = st.session_state.players
     scores = st.session_state.scores
