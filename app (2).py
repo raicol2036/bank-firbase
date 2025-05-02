@@ -461,7 +461,9 @@ for i in range(18):
                         running_points[p] -= 1
                         gain_points += 1
             running_points[w] += gain_points
-            hole_log = f"🏆 第{i+1}洞勝者：{w}{bird_icon}（取得+{gain_points}點）{('｜' + penalty_summary) if penalty_summary else ''}"
+            hole_log = f"🏆 第{i+1}洞勝者：{w}{bird_icon}（取得+{gain_points}點）"
+            if penalty_summary:
+                hole_log += f"｜{penalty_summary}"
             point_bank = 1
         else:
             add_this_hole = 1 + total_penalty_this_hole
