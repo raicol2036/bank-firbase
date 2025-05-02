@@ -408,7 +408,7 @@ for i in range(18):
           continue  # ❌ 錯誤：不在迴圈內，會出現 SyntaxError
 
 
-    if f"confirm_{i}" in st.session_state and st.session_state[f"confirm_{i}"]:
+        if f"confirm_{i}" in st.session_state and st.session_state[f"confirm_{i}"]:
         raw = scores[f"第{i+1}洞"]
         evt = events[f"第{i+1}洞"]
         start_of_hole_bank = point_bank
@@ -455,24 +455,21 @@ for i in range(18):
             is_birdy = raw[w] <= par[i] - 1
             bird_icon = " 🐦" if is_birdy else ""
             gain_points = point_bank
-
-# Birdie 額外加點
-        if is_birdy:
-            for p in players:
-                if p != w and running_points[p] > 0:
-                    running_points[p] -= 1
-                    gain_points += 1
-
-# 加上所有人的扣點（含自己） -> 給勝者
-        gain_points += total_penalty_this_hole
+            if is_birdy:
+                for p in players:
+                    if p != w and running_points[p] > 0:
+                        running_points[p] -= 1
+                        gain_points += 1
+                        event_penalties[p] += 1  # ✅ Birdie 對手扣點也記入
             running_points[w] += gain_points
-            hole_log = f"🏆 第{i+1}洞勝者：{w}{bird_icon}（取得+{gain_points}點）"
-            if penalty_summary:
-                hole_log += f"｜{penalty_summary}"
+            total_penalty_this_hole = sum(event_penalties.values())  # 更新總扣點
+            penalty_info = [f"{p} 扣 {event_penalties[p]}點" for p in players if event_penalties[p] > 0]
+            penalty_summary = "｜".join(penalty_info) if penalty_info else ""
+            hole_log = f"🏆 第{i+1}洞勝者：{w}{bird_icon}（取得+{gain_points}點）{('｜' + penalty_summary) if penalty_summary else ''}"
             point_bank = 1
         else:
-            # 平手時累積點數（賭金 + 扣點）
-            point_bank = start_of_hole_bank + 1 + total_penalty_this_hole
+            add_this_hole = 1 + total_penalty_this_hole
+            bank_after_this_hole = start_of_hole_bank + add_this_hole
             hole_log = f"⚖️ 第{i+1}洞平手{('｜' + penalty_summary) if penalty_summary else ''}（下洞累積 {bank_after_this_hole}點）"
             point_bank = bank_after_this_hole
 
@@ -494,7 +491,6 @@ for i in range(18):
                 else:
                     current_titles[p] = ""
 
-        # ✅ 將目前資料寫入 Firebase
         completed = len([k for k in range(18) if st.session_state.get(f"confirm_{k}", False)])
         game_data = {
             "players": players,
