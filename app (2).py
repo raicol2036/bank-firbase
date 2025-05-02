@@ -317,7 +317,7 @@ if (
     mode == "主控操作端"
     and st.session_state.get("firebase_initialized")
     and st.session_state.get("selected_players")
-    and len(st.session_state.selected_players) == 4
+    and len(st.session_state.selected_players) == 1
     and not st.session_state.get("game_initialized")
 ):
     # 產生 YYMMDD_XX game_id
