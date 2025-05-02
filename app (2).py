@@ -36,7 +36,6 @@ if "firebase_initialized" not in st.session_state:
 CSV_PATH = "players.csv"
 COURSE_DB_PATH = "course_db.csv"
 
-if "players" not in st.session_state:
 if os.path.exists(COURSE_DB_PATH):
     course_df = pd.read_csv(COURSE_DB_PATH)
 else:
