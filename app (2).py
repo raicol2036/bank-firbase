@@ -419,13 +419,13 @@ for i in range(18):
             acts = evt[p] if isinstance(evt[p], list) else []
             pen = 0
             if current_titles[p] in ["Rich", "SuperRich"]:
-            pen = sum(1 for act in acts if act in penalty_keywords)
-            if current_titles[p] == "SuperRich" and "par_on" in acts:
-                pen += 1
-            pen = min(pen, 3)
+                pen = sum(1 for act in acts if act in penalty_keywords)
+                if current_titles[p] == "SuperRich" and "par_on" in acts:
+                    pen += 1
+                pen = min(pen, 3)
             running_points[p] -= pen
             penalty_pool += pen
-        event_penalties[p] = pen
+            event_penalties[p] = pen
 
     # ✅ 勝負判定
     victory_map = {}
