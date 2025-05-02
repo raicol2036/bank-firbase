@@ -380,8 +380,8 @@ if (
     st.markdown(f"**🔐 遊戲 ID： `{game_id}`**")
     st.markdown("---")
     if "game_id" in st.session_state and "qr_bytes" in st.session_state:
-    st.image(st.session_state.qr_bytes, width=180, caption="賽況查詢")
-    st.markdown(f"**🔐 遊戲 ID： `{st.session_state.game_id}`**")
+        st.image(st.session_state.qr_bytes, width=180, caption="賽況查詢")
+        st.markdown(f"**🔐 遊戲 ID： `{st.session_state.game_id}`**")
 
 # --- 主流程 ---
 for i in range(18):
