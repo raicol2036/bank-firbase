@@ -51,6 +51,11 @@ else:
 
 st.set_page_config(page_title="🏌️ 高爾夫BANK系統", layout="centered")
 st.title("🏌️ 高爾夫BANK系統")
+if "game_id" in st.session_state and "qr_bytes" in st.session_state:
+    st.image(st.session_state.qr_bytes, width=180, caption="賽況查詢")
+    st.markdown(f"**🔐 遊戲 ID： `{st.session_state.game_id}`**")
+    st.markdown("---")
+
 
 # --- 根據網址參數，自動切換為查看端模式，並初始化 game_id ---
 query_params = st.query_params
@@ -365,10 +370,14 @@ if (
     qr.add_data(game_url)
     qr.make(fit=True)
 
-    img = qr.make_image(fill_color="darkgreen", back_color="white")
-    img_bytes = io.BytesIO()
-    img.save(img_bytes, format="PNG")
-    img_bytes.seek(0)
+   img = qr.make_image(fill_color="darkgreen", back_color="white")
+   img_bytes = io.BytesIO()
+   img.save(img_bytes, format="PNG")
+   img_bytes.seek(0)
+
+# 儲存至 session_state 供未來使用
+st.session_state.qr_bytes = img_bytes
+
 
     st.image(img_bytes, width=180, caption="賽況查詢")
     st.markdown(f"**🔐 遊戲 ID： `{game_id}`**")
