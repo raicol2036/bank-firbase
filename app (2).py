@@ -413,101 +413,107 @@ for i in range(18):
         evt = events[f"第{i+1}洞"]
         start_of_hole_bank = point_bank
 
+    # ✅ 扣點處理
         event_penalties = {p: 0 for p in players}
+        penalty_pool = 0
         for p in players:
             acts = evt[p] if isinstance(evt[p], list) else []
             pen = 0
             if current_titles[p] in ["Rich", "SuperRich"]:
-                pen = sum(1 for act in acts if act in penalty_keywords)
-                if current_titles[p] == "SuperRich" and "par_on" in acts:
-                    pen += 1
-                pen = min(pen, 3)
+            pen = sum(1 for act in acts if act in penalty_keywords)
+            if current_titles[p] == "SuperRich" and "par_on" in acts:
+                pen += 1
+            pen = min(pen, 3)
             running_points[p] -= pen
-            event_penalties[p] = pen
+            penalty_pool += pen
+        event_penalties[p] = pen
 
-        victory_map = {}
-        for p1 in players:
-            p1_wins = 0
-            for p2 in players:
-                if p1 == p2:
-                    continue
-                adj_p1, adj_p2 = raw[p1], raw[p2]
-                diff = handicaps[p1] - handicaps[p2]
-                if diff > 0 and hcp[i] <= diff:
-                    adj_p1 -= 1
-                elif diff < 0 and hcp[i] <= -diff:
-                    adj_p2 -= 1
-                if adj_p1 < adj_p2:
-                    p1_wins += 1
-            victory_map[p1] = p1_wins
+    # ✅ 勝負判定
+    victory_map = {}
+    for p1 in players:
+        p1_wins = 0
+        for p2 in players:
+            if p1 == p2:
+                continue
+            adj_p1, adj_p2 = raw[p1], raw[p2]
+            diff = handicaps[p1] - handicaps[p2]
+            if diff > 0 and hcp[i] <= diff:
+                adj_p1 -= 1
+            elif diff < 0 and hcp[i] <= -diff:
+                adj_p2 -= 1
+            if adj_p1 < adj_p2:
+                p1_wins += 1
+        victory_map[p1] = p1_wins
 
-        winners = [p for p in players if victory_map[p] == len(players) - 1]
-        total_penalty_this_hole = sum(event_penalties.values())
+    winners = [p for p in players if victory_map[p] == len(players) - 1]
+    penalty_info = [f"{p} 扣 {event_penalties[p]}點" for p in players if event_penalties[p] > 0]
+    penalty_summary = "｜".join(penalty_info) if penalty_info else ""
 
-        penalty_info = []
-        for p in players:
-            if event_penalties[p] > 0:
-                penalty_info.append(f"{p} 扣 {event_penalties[p]}點")
-        penalty_summary = "｜".join(penalty_info) if penalty_info else ""
+    # ✅ 單一勝者處理
+    if len(winners) == 1:
+        w = winners[0]
+        is_birdy = raw[w] <= par[i] - 1
+        gain_points = point_bank + penalty_pool
 
-        if len(winners) == 1:
-            w = winners[0]
-            is_birdy = raw[w] <= par[i] - 1
-            bird_icon = " 🐦" if is_birdy else ""
-            gain_points = point_bank
-            if is_birdy:
-                for p in players:
-                    if p != w and running_points[p] > 0:
-                        running_points[p] -= 1
-                        gain_points += 1
-                        event_penalties[p] += 1  # ✅ Birdie 對手扣點也記入
-            running_points[w] += gain_points
-            total_penalty_this_hole = sum(event_penalties.values())  # 更新總扣點
-            penalty_info = [f"{p} 扣 {event_penalties[p]}點" for p in players if event_penalties[p] > 0]
-            penalty_summary = "｜".join(penalty_info) if penalty_info else ""
-            hole_log = f"🏆 第{i+1}洞勝者：{w}{bird_icon}（取得+{gain_points}點）{('｜' + penalty_summary) if penalty_summary else ''}"
-            point_bank = 1
-        else:
-            add_this_hole = 1 + total_penalty_this_hole
-            bank_after_this_hole = start_of_hole_bank + add_this_hole
-            hole_log = f"⚖️ 第{i+1}洞平手{('｜' + penalty_summary) if penalty_summary else ''}（下洞累積 {bank_after_this_hole}點）"
-            point_bank = bank_after_this_hole
+        # ✅ Birdie 額外加分處理
+        birdie_bonus = 0
+        if is_birdy:
+            for p in players:
+                if p != w and running_points[p] > 0:
+                    running_points[p] -= 1
+                    birdie_bonus += 1
+            gain_points += birdie_bonus
 
-        st.markdown(hole_log)
-        hole_logs.append(hole_log)
+        running_points[w] += gain_points
+        bird_icon = " 🐦" if is_birdy else ""
+        extra_info = f"（取得+{gain_points}點）"
+        if penalty_summary:
+            extra_info += f"｜{penalty_summary}"
+        if is_birdy and birdie_bonus > 0:
+            extra_info += f"｜Birdie 奪得 {birdie_bonus}點"
+        hole_log = f"🏆 第{i+1}洞勝者：{w}{bird_icon}{extra_info}"
+        point_bank = 1
+    else:
+        # ✅ 平手：累積 bank 點
+        add_this_hole = 1 + penalty_pool
+        point_bank += add_this_hole
+        hole_log = f"⚖️ 第{i+1}洞平手"
+        if penalty_summary:
+            hole_log += f"｜{penalty_summary}"
+        hole_log += f"（下洞累積 {point_bank}點）"
 
-        for p in players:
-            if current_titles[p] == "SuperRich":
-                if running_points[p] <= 4:
-                    current_titles[p] = "Rich"
-            elif current_titles[p] == "Rich":
-                if running_points[p] == 0:
-                    current_titles[p] = ""
-            else:
-                if running_points[p] >= 8:
-                    current_titles[p] = "SuperRich"
-                elif running_points[p] >= 4:
-                    current_titles[p] = "Rich"
-                else:
-                    current_titles[p] = ""
+    st.markdown(hole_log)
+    hole_logs.append(hole_log)
 
-        completed = len([k for k in range(18) if st.session_state.get(f"confirm_{k}", False)])
-        game_data = {
-            "players": players,
-            "scores": scores.to_dict(),
-            "events": events.to_dict(),
-            "points": running_points,
-            "titles": current_titles,
-            "logs": hole_logs,
-            "par": par,
-            "hcp": hcp,
-            "course": selected_course,
-            "front_area": front_area,
-            "back_area": back_area,
-            "bet_per_person": bet_per_person,
-            "completed_holes": completed
-        }
-        st.session_state.db.collection("golf_games").document(st.session_state.game_id).set(game_data)
+    # ✅ 頭銜更新
+    for p in players:
+        if current_titles[p] == "SuperRich" and running_points[p] <= 4:
+            current_titles[p] = "Rich"
+        elif current_titles[p] == "Rich" and running_points[p] == 0:
+            current_titles[p] = ""
+        elif current_titles[p] == "" and running_points[p] >= 8:
+            current_titles[p] = "SuperRich"
+        elif current_titles[p] == "" and running_points[p] >= 4:
+            current_titles[p] = "Rich"
+
+    # ✅ Firebase 更新
+    completed = len([k for k in range(18) if st.session_state.get(f"confirm_{k}", False)])
+    game_data = {
+        "players": players,
+        "scores": scores.to_dict(),
+        "events": events.to_dict(),
+        "points": running_points,
+        "titles": current_titles,
+        "logs": hole_logs,
+        "par": par,
+        "hcp": hcp,
+        "course": selected_course,
+        "front_area": front_area,
+        "back_area": back_area,
+        "bet_per_person": bet_per_person,
+        "completed_holes": completed
+    }
+    st.session_state.db.collection("golf_games").document(st.session_state.game_id).set(game_data)
 
 # --- 總結結果（主控端顯示） ---
 if mode == "主控操作端":
