@@ -496,7 +496,7 @@ for p in players:
     if current_titles[p] == "" and running_points[p] >= 8:
         current_titles[p] = "Super Rich Man"
 
-    if current_titles[p] == "" and 4 >= running_points[p] < 8:
+    if current_titles[p] == "" and 4 <= running_points[p] < 8:
         current_titles[p] = "Rich Man"
 
     # ✅ Firebase 更新
