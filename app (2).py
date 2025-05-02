@@ -489,16 +489,16 @@ for i in range(18):
 # ✅ 頭銜更新（建議改寫成不使用 elif，避免語法錯）
 for p in players:
     if current_titles[p] == "Super Rich Man" and running_points[p] <= 4:
-        current_titles[p] = "Rich Man"
+       current_titles[p] = "Rich Man"
 
     if current_titles[p] == "Rich Man" and running_points[p] == 0:
-        current_titles[p] = ""
+       current_titles[p] = ""
 
     if current_titles[p] == "" and running_points[p] >= 8:
-        current_titles[p] = "Super Rich Man"
+       current_titles[p] = "Super Rich Man"
 
     if current_titles[p] == "" and 4 <= running_points[p] < 8:
-        current_titles[p] = "Rich Man"
+       current_titles[p] = "Rich Man"
 
     # ✅ Firebase 更新
     completed = len([k for k in range(18) if st.session_state.get(f"confirm_{k}", False)])
