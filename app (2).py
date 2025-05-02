@@ -504,7 +504,7 @@ for i in range(18):
         }
         st.session_state.db.collection("golf_games").document(st.session_state.game_id).set(game_data)
 
-# --- 總結結果 ---
+#總表
 st.subheader("📊 總結結果")
 total_bet = bet_per_person * len(players)
 completed = len([i for i in range(18) if st.session_state.get(f"confirm_{i}", False)])
