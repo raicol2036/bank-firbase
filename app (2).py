@@ -110,21 +110,21 @@ if mode == "隊員查看端":
     par = game_data["par"]
     hcp = game_data["hcp"]
 
-    # ✅ 查詢端僅顯示總表與 Log
+    if mode == "隊員查看端":
     st.subheader("📊 總結結果")
-    total_bet = bet_per_person * len(players)
+    point_value = bet_per_person * (len(players) - 1)
     result = pd.DataFrame({
         "總點數": [running_points[p] for p in players],
-        "賭金結果": [running_points[p] * bet_per_person - completed * bet_per_person for p in players],
+        "賭金損益": [running_points[p] * point_value for p in players],
         "頭銜": [current_titles[p] for p in players]
-    }, index=players).sort_values("賭金結果", ascending=False)
+    }, index=players).sort_values("賭金損益", ascending=False)
     st.dataframe(result)
 
     st.subheader("📖 洞別說明 Log")
     for line in hole_logs:
         st.text(line)
 
-    st.stop()  # ✅ 中止查詢端後續主流程
+    st.stop()
 
     # ✅ 將狀態資料釋出為主程式變數
     players = st.session_state.players
@@ -502,17 +502,16 @@ for i in range(18):
         }
         st.session_state.db.collection("golf_games").document(st.session_state.game_id).set(game_data)
 
-#總表
-st.subheader("📊 總結結果")
-total_bet = bet_per_person * len(players)
-completed = len([i for i in range(18) if st.session_state.get(f"confirm_{i}", False)])
-result = pd.DataFrame({
-    "總點數": [running_points[p] for p in players],
-    "賭金結果": [running_points[p] * bet_per_person - completed * bet_per_person for p in players],
-    "頭銜": [current_titles[p] for p in players]
-}, index=players).sort_values("賭金結果", ascending=False)
-st.dataframe(result)
-#-------------
+# --- 總結結果（主控端顯示） ---
+if mode == "主控操作端":
+    st.subheader("📊 總結結果")
+    point_value = bet_per_person * (len(players) - 1)
+    result = pd.DataFrame({
+        "總點數": [running_points[p] for p in players],
+        "賭金損益": [running_points[p] * point_value for p in players],
+        "頭銜": [current_titles[p] for p in players]
+    }, index=players).sort_values("賭金損益", ascending=False)
+    st.dataframe(result)
 
 # --- 自動刷新控制（僅隊員端）---
 if mode == "隊員查看端":
