@@ -51,8 +51,10 @@ else:
 
 st.set_page_config(page_title="🏌️ 高爾夫BANK系統", layout="centered")
 st.title("🏌️ 高爾夫BANK系統")
+if "game_id" in st.session_state and "qr_bytes" in st.session_state:
+    st.image(st.session_state.qr_bytes, width=180, caption="賽況查詢")
+    st.markdown(f"**🔐 遊戲 ID： `{st.session_state.game_id}`**")
 
-#-------
 # --- 根據網址參數，自動切換為查看端模式，並初始化 game_id ---
 query_params = st.query_params
 if "mode" in query_params and query_params["mode"] == "view":
