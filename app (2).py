@@ -450,22 +450,22 @@ for i in range(18):
 
         # 事件扣點（使用上一洞的 current_titles）
         # 初始化
-penalty_pool = 0
-birdie_bonus = 0
+        penalty_pool = 0
+        birdie_bonus = 0
 
 # 事件扣點處理，統計 penalty_pool
-event_penalties = {}
-for p in players:
-    acts = evt[p] if isinstance(evt[p], list) else []
-    pen = 0
-    if current_titles[p] in ["Rich Man", "Super Rich Man"]:
-        pen = sum(1 for act in acts if act in penalty_keywords)
-        if current_titles[p] == "Super Rich Man" and "par_on" in acts:
-            pen += 1
-        pen = min(pen, 3)
-    running_points[p] -= pen  # 自己扣分
-    penalty_pool += pen
-    event_penalties[p] = pen
+       event_penalties = {}
+       for p in players:
+           acts = evt[p] if isinstance(evt[p], list) else []
+           pen = 0
+           if current_titles[p] in ["Rich Man", "Super Rich Man"]:
+               pen = sum(1 for act in acts if act in penalty_keywords)
+               if current_titles[p] == "Super Rich Man" and "par_on" in acts:
+                   pen += 1
+               pen = min(pen, 3)
+           running_points[p] -= pen  # 自己扣分
+           penalty_pool += pen
+           event_penalties[p] = pen
 
         # 計算新頭銜（延後至下一洞生效）
         for p in players:
