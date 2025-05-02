@@ -113,7 +113,7 @@ if mode == "隊員查看端":
 if mode == "隊員查看端":    
     st.subheader("📊 總結結果")
     total_bet = bet_per_person * len(players)
-    completed = len([i for i in range(18) if st.session_state.get(f"confirm_{i}", False)])
+    # ✅ 正確的 completed，直接使用 Firebase 中的已完成洞數
     result = pd.DataFrame({
         "總點數": [running_points[p] for p in players],
         "賭金結果": [running_points[p] * total_bet - completed * bet_per_person for p in players],
@@ -126,6 +126,7 @@ if mode == "隊員查看端":
         st.text(line)
 
     st.stop()
+
 
     # ✅ 將狀態資料釋出為主程式變數
     players = st.session_state.players
