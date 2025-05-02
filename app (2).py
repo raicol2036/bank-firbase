@@ -508,15 +508,13 @@ for i in range(18):
 # --- 總結結果（主控端顯示） ---
 if mode == "主控操作端":
     st.subheader("📊 總結結果")
-
-    total_players = len(players)
+    total_bet = bet_per_person * len(players)
     completed = len([i for i in range(18) if st.session_state.get(f"confirm_{i}", False)])
     result = pd.DataFrame({
         "總點數": [running_points[p] for p in players],
-        "賭金損益": [running_points[p] * bet_per_person * total_players - completed * bet_per_person for p in players],
+        "賭金結果": [running_points[p] * total_bet - completed * bet_per_person for p in players],
         "頭銜": [current_titles[p] for p in players]
-    }, index=players).sort_values("賭金損益", ascending=False)
-
+    }, index=players).sort_values("賭金結果", ascending=False)
     st.dataframe(result)
 
 # --- 自動刷新控制（僅隊員端）---
