@@ -37,12 +37,6 @@ CSV_PATH = "players.csv"
 COURSE_DB_PATH = "course_db.csv"
 
 if "players" not in st.session_state:
-    if os.path.exists(CSV_PATH):
-        df = pd.read_csv(CSV_PATH)
-        st.session_state.players = df["name"].dropna().tolist()
-    else:
-        st.session_state.players = []
-
 if os.path.exists(COURSE_DB_PATH):
     course_df = pd.read_csv(COURSE_DB_PATH)
 else:
@@ -272,21 +266,6 @@ if mode == "主控操作端":
             key="player_selector",
             on_change=update_selection
         )
-
-    # 新增球員表單
-    with st.form("new_player_form", clear_on_submit=True):
-        new_name = st.text_input("新增球員名稱", key="new_player_name")
-        if st.form_submit_button("確認新增"):
-            if not new_name.strip():
-                st.warning("⚠️ 名稱不能為空")
-            elif new_name in st.session_state.players:
-                st.warning(f"⚠️ {new_name} 已存在")
-            else:
-                # 原子化更新操作
-                st.session_state.players.append(new_name)
-                pd.DataFrame({"name": st.session_state.players}).to_csv(CSV_PATH, index=False)
-                st.success(f"✅ 已新增 {new_name}")
-                st.rerun()
 
     # 球員數量驗證
     if not players:
