@@ -459,33 +459,26 @@ for i in range(18):
                 current_titles[p] = "Rich Man"
 
         # ✅ 扣點（根據最新頭銜）
-     # 事件扣點計算 (Event penalty calculation) 
-# 調整：確保事件扣點在本洞結束前依照前一洞頭銜進行，且不影響本洞勝負計算
-if event_triggered:
-    # 範例：依據前一洞的頭銜給予事件懲罰
-    for i, title in enumerate(current_titles):
-        if title == "Rich Man":
-            running_points[i] -= event_penalty  # Rich Man 承受事件扣點
-            st.write(f"玩家{i+1} 事件懲罰 -{event_penalty} 分（Rich Man）")
+        for i, title in enumerate(current_titles):
+            if title == "Rich Man":
+                running_points[i] -= event_penalty  # Rich Man 承受事件扣點
+                st.write(f"玩家{i+1} 事件懲罰 -{event_penalty} 分（Rich Man）")
         # ... 其他事件邏輯 ...
 
 # Birdie 加分計算 (Birdie bonus calculation)
-# 調整：Birdie 額外加分在勝負點數結算前處理，並且以本洞開始時的頭銜身份判定
-for i, score in enumerate(hole_scores):
-    if score <= birdie_threshold:  # 判定該玩家是否達成Birdie（此為範例條件）
-        running_points[i] += birdie_bonus
-        st.write(f"玩家{i+1} 達成 Birdie！額外獲得 {birdie_bonus} 分")
-
-# 勝負結算與點數分發 (Determine winner and distribute points)
-# 調整：在事件懲罰與 Birdie 加分都處理完後，再判定本洞勝負並給予點數
-if playerA_score < playerB_score:
-    winner_index = 0
-elif playerB_score < playerA_score:
-    winner_index = 1
-else:
-    winner_index = None  # 平手
+        for i, score in enumerate(hole_scores):
+            if score <= birdie_threshold:  # 判定該玩家是否達成Birdie（此為範例條件）
+                running_points[i] += birdie_bonus
+                st.write(f"玩家{i+1} 達成 Birdie！額外獲得 {birdie_bonus} 分")
+        if playerA_score < playerB_score:
+            winner_index = 0
+            elif playerB_score < playerA_score:
+            winner_index = 1
+        else:
+            winner_index = None  # 平手
 
 if winner_index is not None:
+
     # 勝者取得累積點數（本洞獎勵），此時事件扣點與Birdie加分皆已生效
     running_points[winner_index] += carryover_points
     st.write(f"玩家{winner_index+1} 獲得本洞勝利，取得 {carryover_points} 分")
