@@ -392,9 +392,9 @@ for i in range(18):
         cols = st.columns(len(players))
         for j, p in enumerate(players):
             with cols[j]:
-                if current_titles.get(p) == "SuperRich":
+                if current_titles.get(p) == "SuperRich Man":
                     st.markdown("👑 **Super Rich Man**")
-                elif current_titles.get(p) == "Rich":
+                elif current_titles.get(p) == "Rich Man":
                     st.markdown("🏆 **Rich Man**")
                 scores.loc[p, f"第{i+1}洞"] = st.number_input(f"{p} 桿數（{running_points[p]} 點）", 1, 15, par[i], key=f"score_{p}_{i}")
                 selected_display = st.multiselect(f"{p} 事件", event_opts_display, key=f"event_{p}_{i}")
@@ -459,18 +459,65 @@ for i in range(18):
                 current_titles[p] = "Rich Man"
 
         # ✅ 扣點（根據最新頭銜）
-        event_penalties = {}
-        for p in players:
-            acts = evt[p] if isinstance(evt[p], list) else []
-            pen = 0
-            if current_titles[p] in ["Rich Man", "Super Rich Man"]:
-                pen = sum(1 for act in acts if act in penalty_keywords)
-                if current_titles[p] == "Super Rich Man" and "par_on" in acts:
-                    pen += 1
-                pen = min(pen, 3)
-            running_points[p] -= pen
-            penalty_pool += pen
-            event_penalties[p] = pen
+     # 事件扣點計算 (Event penalty calculation) 
+# 調整：確保事件扣點在本洞結束前依照前一洞頭銜進行，且不影響本洞勝負計算
+if event_triggered:
+    # 範例：依據前一洞的頭銜給予事件懲罰
+    for i, title in enumerate(current_titles):
+        if title == "Rich Man":
+            running_points[i] -= event_penalty  # Rich Man 承受事件扣點
+            st.write(f"玩家{i+1} 事件懲罰 -{event_penalty} 分（Rich Man）")
+        # ... 其他事件邏輯 ...
+
+# Birdie 加分計算 (Birdie bonus calculation)
+# 調整：Birdie 額外加分在勝負點數結算前處理，並且以本洞開始時的頭銜身份判定
+for i, score in enumerate(hole_scores):
+    if score <= birdie_threshold:  # 判定該玩家是否達成Birdie（此為範例條件）
+        running_points[i] += birdie_bonus
+        st.write(f"玩家{i+1} 達成 Birdie！額外獲得 {birdie_bonus} 分")
+
+# 勝負結算與點數分發 (Determine winner and distribute points)
+# 調整：在事件懲罰與 Birdie 加分都處理完後，再判定本洞勝負並給予點數
+if playerA_score < playerB_score:
+    winner_index = 0
+elif playerB_score < playerA_score:
+    winner_index = 1
+else:
+    winner_index = None  # 平手
+
+if winner_index is not None:
+    # 勝者取得累積點數（本洞獎勵），此時事件扣點與Birdie加分皆已生效
+    running_points[winner_index] += carryover_points
+    st.write(f"玩家{winner_index+1} 獲得本洞勝利，取得 {carryover_points} 分")
+    carryover_points = 1  # 重置累積點數
+else:
+    # 平手處理：累積點數帶至下洞
+    carryover_points += 1
+    st.write(f"本洞平手，獎勵累積至下洞，共 {carryover_points} 分")
+
+# 頭銜更新 (Update titles after hole)
+# 調整：於洞局結束後才更新頭銜 (Rich Man / Super Rich Man)，並在下洞開始時才生效
+next_titles = current_titles.copy()  # 建立下一洞頭銜的暫存
+for i, points in enumerate(running_points):
+    if points >= super_rich_threshold:
+        next_titles[i] = "Super Rich Man"
+    elif points >= rich_threshold:
+        next_titles[i] = "Rich Man"
+    else:
+        next_titles[i] = None
+# 紀錄頭銜變化但於下洞才套用
+st.write(f"頭銜更新（下洞生效）：{next_titles}")
+
+# 儲存狀態到 Firebase 和 session_state 
+# 調整：使用 next_titles 更新目前頭銜並同步遠端資料庫
+st.session_state.current_titles = next_titles  # 將更新後的頭銜設為下洞的現行頭銜
+db.collection('games').document(game_id).update({
+    'current_titles': next_titles,
+    'running_points': running_points,
+    'carryover_points': carryover_points,
+    # ... 其他需要更新的欄位 ...
+})
+
 
         # ✅ 日誌記錄
         penalty_info = [f"{p} 扣 {event_penalties[p]}點" for p in players if event_penalties[p] > 0]
