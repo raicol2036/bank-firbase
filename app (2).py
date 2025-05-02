@@ -370,10 +370,10 @@ if (
     qr.add_data(game_url)
     qr.make(fit=True)
 
-   img = qr.make_image(fill_color="darkgreen", back_color="white")
-   img_bytes = io.BytesIO()
-   img.save(img_bytes, format="PNG")
-   img_bytes.seek(0)
+    img = qr.make_image(fill_color="darkgreen", back_color="white")
+    img_bytes = io.BytesIO()
+    img.save(img_bytes, format="PNG")
+    img_bytes.seek(0)
 
 # 儲存至 session_state 供未來使用
 st.session_state.qr_bytes = img_bytes
