@@ -489,18 +489,17 @@ for p in players:
     if current_titles[p] == "SuperRich":
         if running_points[p] <= 4:
             current_titles[p] = "Rich"
-
-    elif current_titles[p] == "Rich":
-        if running_points[p] >= 8:
-            current_titles[p] = "SuperRich"
-        elif running_points[p] == 0:
+    if current_titles[p] == "Rich":
+        if running_points[p] == 0:
             current_titles[p] = ""
-
-    elif current_titles[p] == "":
+        elif running_points[p] >= 8:
+            current_titles[p] = "SuperRich"
+    if current_titles[p] == "":
         if running_points[p] >= 8:
             current_titles[p] = "SuperRich"
         elif running_points[p] >= 4:
             current_titles[p] = "Rich"
+
 
     # ✅ Firebase 更新
     completed = len([k for k in range(18) if st.session_state.get(f"confirm_{k}", False)])
