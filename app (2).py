@@ -484,7 +484,6 @@ for i in range(18):
     st.markdown(hole_log)
     hole_logs.append(hole_log)
 
-    # ✅ 頭銜更新（建議改寫成不使用 elif，避免語法錯）
 # ✅ 頭銜更新（建議改寫成不使用 elif，避免語法錯）
 for p in players:
     if current_titles[p] == "Super Rich Man" and running_points[p] <= 4:
