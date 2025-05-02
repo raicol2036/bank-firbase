@@ -511,9 +511,9 @@ db.collection('games').document(game_id).update({
     # ... 其他需要更新的欄位 ...
 })
 
-        # ✅ 日誌記錄
-     penalty_info = [f"{p} 扣 {event_penalties[p]}點" for p in players if event_penalties[p] > 0]
-     penalty_summary = "｜".join(penalty_info) if penalty_info else ""
+# ✅ 日誌記錄
+penalty_info = [f"{p} 扣 {event_penalties[p]}點" for p in players if event_penalties[p] > 0]    
+penalty_summary = "｜".join(penalty_info) if penalty_info else ""
         if len(winners) == 1:
             bird_icon = " 🐦" if is_birdy else ""
             hole_log = f"🏆 第{i+1}洞勝者：{w}{bird_icon}（+{gain_points}點）"
