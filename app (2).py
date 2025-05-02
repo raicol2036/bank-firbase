@@ -472,7 +472,7 @@ for i in range(18):
                 st.write(f"玩家{i+1} 達成 Birdie！額外獲得 {birdie_bonus} 分")
         if playerA_score < playerB_score:
             winner_index = 0
-            elif playerB_score < playerA_score:
+        elif playerB_score < playerA_score:
             winner_index = 1
         else:
             winner_index = None  # 平手
