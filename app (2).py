@@ -115,7 +115,8 @@ if mode == "隊員查看端":
     par = game_data["par"]
     hcp = game_data["hcp"]
     par = game_data["par"]
-
+    hcp = game_data["hcp"]
+    
 if mode == "隊員查看端":    
     if st.button("🔄 重新整理資料"):
         st.rerun()
