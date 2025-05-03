@@ -463,7 +463,7 @@ for i in range(18):
             running_points[w] += gain_points
             point_bank = 1
         else:
-            point_bank += 1
+            point_bank += 1 + penalty_pool
 
         # 計算新頭銜（延後至下一洞生效）
         for p in players:
