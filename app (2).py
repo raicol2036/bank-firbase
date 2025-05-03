@@ -50,8 +50,8 @@ if "players" not in st.session_state:
         st.session_state.players = []  # 空名單
 
 
-st.set_page_config(page_title="🏌️ 高爾夫BANK系統", layout="centered")
-st.title("🏌️ 高爾夫BANK系統")
+st.set_page_config(page_title="🏌️ 高爾夫BANK", layout="centered")
+st.title("🏌️ 高爾夫BANK")
 if "game_id" in st.session_state and "qr_bytes" in st.session_state:
     st.image(st.session_state.qr_bytes, width=180, caption="賽況查詢")
     st.markdown(f"**🔐 遊戲 ID： `{st.session_state.game_id}`**")
