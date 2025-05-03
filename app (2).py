@@ -114,6 +114,11 @@ if mode == "隊員查看端":
     bet_per_person = game_data["bet_per_person"]
     par = game_data["par"]
     hcp = game_data["hcp"]
+    par = game_data["par"]
+
+# ✅ 在這裡加上
+handicaps = game_data["handicaps"]
+
     
 if mode == "隊員查看端":    
     if st.button("🔄 重新整理資料"):
@@ -124,7 +129,7 @@ if mode == "隊員查看端":
     st.markdown(f"🏷️ **比賽 ID**： `{st.session_state.game_id}`")
     st.markdown(f"💰 **每局賭金**： `{bet_per_person}`")
     st.markdown("🧑‍🤝‍🧑 **球員與差點**：")
-    st.markdown(" / ".join([f"{p} ({handicaps[p]})" for p in players]))
+    st.markdown(" / ".join([f"{p} ({handicaps.get(p, '-')})" for p in players]))
     st.markdown("---")
 
     st.subheader("📊 總結結果")
@@ -344,6 +349,7 @@ if (
         "back_area": back_area,
         "bet_per_person": bet_per_person,
         "completed_holes": 0
+        "handicaps": handicaps,
     }
 
     st.session_state.db.collection("golf_games").document(game_id).set(game_data)
