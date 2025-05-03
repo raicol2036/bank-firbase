@@ -114,26 +114,33 @@ if mode == "隊員查看端":
     bet_per_person = game_data["bet_per_person"]
     par = game_data["par"]
     hcp = game_data["hcp"]
-
+    
 if mode == "隊員查看端":    
     if st.button("🔄 重新整理資料"):
         st.rerun()
+
+    # ✅ 顯示比賽摘要資訊
+    st.subheader("🧾 比賽資訊")
+    st.markdown(f"🏷️ **比賽 ID**： `{st.session_state.game_id}`")
+    st.markdown(f"💰 **每局賭金**： `{bet_per_person}`")
+    st.markdown("🧑‍🤝‍🧑 **球員與差點**：")
+    st.markdown(" / ".join([f"{p} ({handicaps[p]})" for p in players]))
+    st.markdown("---")
+
     st.subheader("📊 總結結果")
     total_bet = bet_per_person * len(players)
-    # ✅ 正確的 completed，直接使用 Firebase 中的已完成洞數
     result = pd.DataFrame({
         "總點數": [running_points[p] for p in players],
-        "賭金結果": [running_points[p] * total_bet - completed * bet_per_person for p in players],
+        "結果": [running_points[p] * total_bet - completed * bet_per_person for p in players],
         "頭銜": [current_titles[p] for p in players]
-    }, index=players).sort_values("賭金結果", ascending=False)
+    }, index=players).sort_values("結果", ascending=False)
     st.dataframe(result)
 
-    st.subheader("📖 洞別說明 Log")
+    st.subheader("📖 Event Log")
     for line in hole_logs:
         st.text(line)
 
     st.stop()
-
 
     # ✅ 將狀態資料釋出為主程式變數
     players = st.session_state.players
@@ -543,7 +550,7 @@ if mode == "主控操作端":
     completed = len([i for i in range(18) if st.session_state.get(f"confirm_{i}", False)])
     result = pd.DataFrame({
         "總點數": [running_points[p] for p in players],
-        "賭金結果": [running_points[p] * total_bet - completed * bet_per_person for p in players],
+        "結果": [running_points[p] * total_bet - completed * bet_per_person for p in players],
         "頭銜": [current_titles[p] for p in players]
     }, index=players).sort_values("賭金結果", ascending=False)
     st.dataframe(result)
@@ -553,7 +560,7 @@ if mode == "隊員查看端":
     st.experimental_rerun(interval=10)  # 每10秒自動刷新
 
 # --- 洞別日誌顯示 ---
-st.subheader("📖 洞別說明 Log")
+st.subheader("📖 Event Log")
 for line in hole_logs:
     st.text(line)
 
