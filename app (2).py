@@ -115,9 +115,7 @@ if mode == "隊員查看端":
     par = game_data["par"]
     hcp = game_data["hcp"]
     par = game_data["par"]
-
-# ✅ 在這裡加上
-handicaps = game_data["handicaps"]
+    handicaps = game_data["handicaps"]
 
     
 if mode == "隊員查看端":    
