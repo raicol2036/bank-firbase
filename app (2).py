@@ -432,7 +432,7 @@ for i in range(18):
 
         penalty_pool = 0
         birdie_bonus = 0
-        gain_points = point_bank
+        gain_points = point_bank + penalty_pool
 
         if len(winners) == 1:
             w = winners[0]
@@ -442,7 +442,7 @@ for i in range(18):
                     if p != w and running_points[p] > 0:
                         running_points[p] -= 1
                         birdie_bonus += 1
-                gain_points = point_bank + penalty_pool
+                gain_points = point_bank 
             running_points[w] += gain_points
             point_bank = 1
         else:
