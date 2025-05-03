@@ -445,8 +445,11 @@ for i in range(18):
                 if current_titles[p] == "Super Rich Man" and "par_on" in acts:
                     pen += 1
                 pen = min(pen, 3)
-            running_points[p] -= pen  # 自己扣分
-            penalty_pool += pen
+            actual_penalty = min(pen, running_points[p])  # ❗最多只扣剩餘點數
+            running_points[p] -= actual_penalty
+            penalty_pool += actual_penalty
+            event_penalties[p] = actual_penalty  # 若你後續有使用
+
             event_penalties[p] = pen
 #算得分
         gain_points = point_bank + penalty_pool
