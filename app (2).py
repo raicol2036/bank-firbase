@@ -348,7 +348,7 @@ if (
         "front_area": front_area,
         "back_area": back_area,
         "bet_per_person": bet_per_person,
-        "completed_holes": 0
+        "completed_holes": 0,
         "handicaps": handicaps,
     }
 
