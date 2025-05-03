@@ -442,7 +442,7 @@ for i in range(18):
                     if p != w and running_points[p] > 0:
                         running_points[p] -= 1
                         birdie_bonus += 1
-                gain_points = point_bank 
+                gain_points += birdie_bonus
             running_points[w] += gain_points
             point_bank = 1
         else:
