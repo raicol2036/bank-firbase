@@ -124,8 +124,6 @@ if mode == "隊員查看端":
     st.subheader("🧾 比賽資訊")
     st.markdown(f"🏷️ **比賽 ID**： `{st.session_state.game_id}`")
     st.markdown(f"💰 **每局賭金**： `{bet_per_person}`")
-    st.markdown("🧑‍🤝‍🧑 **球員與差點**：")
-    st.markdown(" / ".join([f"{p} ({hcp.get(p, '-')})" for p in players]))
     st.markdown("---")
 
     st.subheader("📊 總結結果")
