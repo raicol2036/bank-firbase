@@ -430,24 +430,6 @@ for i in range(18):
 
         winners = [p for p in players if victory_map[p] == len(players) - 1]
 
-        penalty_pool = 0
-        birdie_bonus = 0
-        gain_points = point_bank + penalty_pool
-
-        if len(winners) == 1:
-            w = winners[0]
-            is_birdy = raw[w] <= par[i] - 1
-            if is_birdy:
-                for p in players:
-                    if p != w and running_points[p] > 0:
-                        running_points[p] -= 1
-                        birdie_bonus += 1
-                gain_points += birdie_bonus
-            running_points[w] += gain_points
-            point_bank = 1
-        else:
-            point_bank += 1
-
         # 事件扣點（使用上一洞的 current_titles）
         # 初始化
         penalty_pool = 0
@@ -466,6 +448,22 @@ for i in range(18):
             running_points[p] -= pen  # 自己扣分
             penalty_pool += pen
             event_penalties[p] = pen
+#算得分
+        gain_points = point_bank + penalty_pool
+
+        if len(winners) == 1:
+            w = winners[0]
+            is_birdy = raw[w] <= par[i] - 1
+            if is_birdy:
+                for p in players:
+                    if p != w and running_points[p] > 0:
+                        running_points[p] -= 1
+                        birdie_bonus += 1
+                gain_points += birdie_bonus
+            running_points[w] += gain_points
+            point_bank = 1
+        else:
+            point_bank += 1
 
         # 計算新頭銜（延後至下一洞生效）
         for p in players:
