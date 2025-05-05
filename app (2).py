@@ -553,7 +553,7 @@ if mode == "主控操作端":
         "總點數": [running_points[p] for p in players],
         "結果": [running_points[p] * total_bet - completed * bet_per_person for p in players],
         "頭銜": [current_titles[p] for p in players]
-    }, index=players).sort_values("賭金結果", ascending=False)
+    }, index=players).sort_values("結果", ascending=False)
     st.dataframe(result)
 
 # --- 自動刷新控制（僅隊員端）---
