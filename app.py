@@ -222,7 +222,7 @@ if (
     st.write("🆔 賽事編號：", game_id)
 
     # 產生 QR code（請確認你的正式 App 網址）
-    game_url = f"https://bank-firbase.streamlit.app/?mode=view&game_id={game_id}"
+    game_url = f"https://bank-firebase.streamlit.app/?mode=view&game_id={game_id}"
     qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=8, border=4)
     qr.add_data(game_url)
     qr.make(fit=True)
