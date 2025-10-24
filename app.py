@@ -344,24 +344,32 @@ for i in range(18):
         penalty_pool += actual_penalty
         event_penalties_actual[p] = actual_penalty
 
-    # 3) 計分池與 Birdie
-    gain_points = point_bank + penalty_pool
-    birdie_bonus = 0
+   # 3) 計分池與 Birdie
+# 事件扣點（penalty_pool）會加入「當前池子」：
+#  - 若本洞有人勝：勝者一次拿走 point_bank + penalty_pool
+#  - 若本洞平手：把（1 點 + penalty_pool）累積到下一洞
+gain_points = point_bank + penalty_pool
+birdie_bonus = 0
 
-    if len(winners) == 1:
-        w = winners[0]
-        is_birdie = raw[w] <= par[i] - 1
-        if is_birdie:
-            for p in players:
-                if p != w and running_points[p] > 0:
-                    running_points[p] -= 1
-                    birdie_bonus += 1
-            gain_points += birdie_bonus
-        running_points[w] += gain_points
-        point_bank = 1
-    else:
-        # 平手時只累積 1 點；事件扣點不進入 bank（避免膨脹）
-        point_bank += 1
+if len(winners) == 1:
+    w = winners[0]
+    # 先領走池子
+    running_points[w] += gain_points
+
+    # 再處理 Birdie：向每位「有點數」的其他球員各收 1 點（純轉移，不影響池子）
+    is_birdie = int(raw[w]) <= int(par[i]) - 1
+    if is_birdie:
+        for p in players:
+            if p != w and running_points[p] > 0:
+                running_points[p] -= 1
+                birdie_bonus += 1
+        running_points[w] += birdie_bonus
+
+    # 重置池子
+    point_bank = 1
+else:
+    # 平手：沒人得分，把「本洞 1 點 + 本洞事件扣點」累積進池子
+    point_bank += 1 + penalty_pool
 
     # 4) 計算新頭銜（下一洞生效）
     next_titles = current_titles.copy()
