@@ -1,8 +1,8 @@
-streamlit
-pandas
-pydrive2
-qrcode
-google-auth
-google-auth-oauthlib
-google-api-python-client
-firebase-admin
+streamlit>=1.36
+firebase-admin>=6.5.0
+google-cloud-firestore>=2.16.0
+qrcode[pil]>=7.4.2
+pillow>=10.4.0
+pytz>=2024.1
+pandas>=2.2.2
+streamlit-autorefresh>=1.0.0
