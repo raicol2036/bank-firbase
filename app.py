@@ -1,6 +1,6 @@
 # =================== 必須最先呼叫 ===================
 import streamlit as st
-st.set_page_config(page_title="🏌️ 高爾夫BANK v3.5.1", layout="centered")
+st.set_page_config(page_title="🏌️ 高爾夫BANK v3.5", layout="centered")
 
 # =================== Imports ===================
 import os
@@ -81,7 +81,7 @@ if "mode" not in st.session_state:
 mode = st.session_state.mode
 
 # =================== 共用：球場選擇（供建立賽事寫入） ===================
-st.title("🏌️ 高爾夫BANK v3.5.1")
+st.title("🏌️ 高爾夫BANK v3.5")
 
 course_options = course_df["course_name"].unique().tolist()
 selected_course = st.selectbox("選擇球場", course_options)
@@ -131,9 +131,9 @@ if mode == "隊員查看端":
     players         = game_data["players"]
     running_points  = game_data["points"]
     current_titles  = game_data.get("titles", {p: "" for p in players})
-    hole_logs       = game_data.get("logs", [])
-    completed       = int(game_data.get("completed_holes", 0))
-    bet_per_person  = int(game_data.get("bet_per_person", 100))
+    hole_logs       = game_data["logs"]
+    completed       = game_data["completed_holes"]
+    bet_per_person  = game_data["bet_per_person"]
 
     st.markdown(f"🏷️ **比賽 ID**： `{game_id}`")
     st.markdown(f"💰 **每局賭金**： `{bet_per_person}`")
@@ -145,7 +145,7 @@ if mode == "隊員查看端":
     result = pd.DataFrame({
         "總點數": [running_points[p] for p in players],
         "結果": [running_points[p] * total_bet - completed * bet_per_person for p in players],
-        "頭銜": [current_titles.get(p, "") for p in players]
+        "頭銜": [current_titles[p] for p in players]
     }, index=players).sort_values("結果", ascending=False)
     st.dataframe(result, use_container_width=True)
 
@@ -181,9 +181,10 @@ if not players:
 
 # 差點/賭金
 handicaps = {p: st.number_input(f"{p} 差點", 0, 54, 0, key=f"hcp_{p}") for p in players}
-bet_per_person = st.number_input("單局賭金（每人）", 100, 100000, 100)
+bet_per_person = st.number_input("單局賭金（每人）", 100, 1000, 100)
 
 # =================== 建賽：game_id / 寫入 Firebase / 產生 QR ===================
+from datetime import timezone
 tz = pytz.timezone("Asia/Taipei")
 if (
     mode == "主控操作端"
@@ -194,7 +195,6 @@ if (
 ):
     today_str = datetime.now(tz).strftime("%y%m%d")
     games_ref = db.collection("golf_games")
-    # 計算當日流水號（小型用量可，若大量競態可改用交易/隨機碼）
     same_day_count = sum(1 for doc in games_ref.stream() if doc.id.startswith(today_str))
     game_id = f"{today_str}_{same_day_count + 1:02d}"
     st.session_state.game_id = game_id
@@ -212,7 +212,7 @@ if (
         "course": selected_course,
         "front_area": front_area,
         "back_area": back_area,
-        "bet_per_person": int(bet_per_person),
+        "bet_per_person": bet_per_person,
         "completed_holes": 0
     }
     db.collection("golf_games").document(game_id).set(game_data)
@@ -221,8 +221,8 @@ if (
     st.success("✅ 賽事資料已寫入 Firebase")
     st.write("🆔 賽事編號：", game_id)
 
-    # 產生 QR code（請換成你的正式 App 網址）
-    game_url = f"https://bank-firebase.streamlit.app/?mode=view&game_id={game_id}"
+    # 產生 QR code（請確認你的正式 App 網址）
+    game_url = f"https://bank-firbase.streamlit.app/?mode=view&game_id={game_id}"
     qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=8, border=4)
     qr.add_data(game_url)
     qr.make(fit=True)
@@ -238,21 +238,21 @@ if (
 
 # =================== 初始化逐洞 DataFrame / 狀態 ===================
 # 分數 / 事件表（存活於 session_state）
-need_scores_reset = ("scores_df" not in st.session_state) or (set(st.session_state.get("scores_df", pd.DataFrame()).index) != set(players))
-need_events_reset = ("events_df" not in st.session_state) or (set(st.session_state.get("events_df", pd.DataFrame()).index) != set(players))
-need_points_reset = ("running_points" not in st.session_state) or (set(st.session_state.get("running_points", {}).keys()) != set(players))
-need_titles_reset = ("current_titles" not in st.session_state) or (set(st.session_state.get("current_titles", {}).keys()) != set(players))
-
-if need_scores_reset:
+if "scores_df" not in st.session_state or set(st.session_state.get("scores_df", pd.DataFrame()).index) != set(players):
     st.session_state.scores_df = pd.DataFrame(index=players, columns=[f"第{i+1}洞" for i in range(18)])
-if need_events_reset:
+
+if "events_df" not in st.session_state or set(st.session_state.get("events_df", pd.DataFrame()).index) != set(players):
     st.session_state.events_df = pd.DataFrame(index=players, columns=[f"第{i+1}洞" for i in range(18)])
-if need_points_reset:
+
+if "running_points" not in st.session_state or set(st.session_state.get("running_points", {}).keys()) != set(players):
     st.session_state.running_points = {p: 0 for p in players}
-if need_titles_reset:
+
+if "current_titles" not in st.session_state or set(st.session_state.get("current_titles", {}).keys()) != set(players):
     st.session_state.current_titles = {p: "" for p in players}
+
 if "hole_logs" not in st.session_state:
     st.session_state.hole_logs = []
+
 if "point_bank" not in st.session_state:
     st.session_state.point_bank = 1
 
@@ -290,17 +290,12 @@ for i in range(18):
                 st.markdown("👑 **Super Rich Man**")
             elif current_titles.get(p) == "Rich Man":
                 st.markdown("🏆 **Rich Man**")
-            cur_val = scores.loc[p, f"第{i+1}洞"]
-            default_score = int(par[i]) if pd.isna(cur_val) else int(cur_val)
-            scores.loc[p, f"第{i+1}洞"] = st.number_input(
-                f"{p} 桿數（目前 {running_points[p]} 點）",
-                min_value=1, max_value=15, value=default_score,
-                key=f"score_{p}_{i}"
-            )
-            selected_display = st.multiselect(
-                f"{p} 事件", event_opts_display, default=[],
-                key=f"event_{p}_{i}"
-            )
+            default_score = par[i] if pd.isna(scores.loc[p, f"第{i+1}洞"]) else int(scores.loc[p, f"第{i+1}洞"])
+            scores.loc[p, f"第{i+1}洞"] = st.number_input(f"{p} 桿數（目前 {running_points[p]} 點）",
+                                                           min_value=1, max_value=15, value=default_score,
+                                                           key=f"score_{p}_{i}")
+            selected_display = st.multiselect(f"{p} 事件", event_opts_display, default=[],
+                                              key=f"event_{p}_{i}")
             selected_internal = [event_translate[d] for d in selected_display]
             events.loc[p, f"第{i+1}洞"] = selected_internal
 
@@ -313,15 +308,15 @@ for i in range(18):
     raw = scores[f"第{i+1}洞"]
     evt = events[f"第{i+1}洞"]
 
-    # 1) 一對一勝負（差點低者讓差點高者，在 HCP<=差值 的洞）
+    # 1) 一對一勝負（讓桿以 HCP 門檻套用於差點低者讓差點高者）
     victory_map = {}
     for p1 in players:
         p1_wins = 0
         for p2 in players:
             if p1 == p2:
                 continue
-            adj_p1, adj_p2 = int(raw[p1]), int(raw[p2])
-            diff = int(handicaps[p1]) - int(handicaps[p2])
+            adj_p1, adj_p2 = raw[p1], raw[p2]
+            diff = handicaps[p1] - handicaps[p2]
             # 差點高者獲得在 HCP<=差值 的洞數之讓桿（逐洞比較）
             if diff > 0 and hcp[i] <= diff:      # p1 差點較高 → p1 得到讓桿
                 adj_p1 -= 1
@@ -355,7 +350,7 @@ for i in range(18):
 
     if len(winners) == 1:
         w = winners[0]
-        is_birdie = int(raw[w]) <= int(par[i]) - 1
+        is_birdie = raw[w] <= par[i] - 1
         if is_birdie:
             for p in players:
                 if p != w and running_points[p] > 0:
@@ -382,7 +377,7 @@ for i in range(18):
             else:
                 next_titles[p] = ""
         elif cur == "Rich Man":
-            # Rich 直到回到 0 才取消
+            # 記憶規則：Rich 直到回到 0 才取消
             if pt >= 8:
                 next_titles[p] = "Super Rich Man"
             elif pt == 0:
@@ -390,7 +385,7 @@ for i in range(18):
             else:
                 next_titles[p] = "Rich Man"
         elif cur == "Super Rich Man":
-            # Super Rich 直到 <4 才降回 Rich
+            # 記憶規則：Super Rich 直到 <4 才降回 Rich
             if pt < 4:
                 next_titles[p] = "Rich Man"
             else:
@@ -437,18 +432,18 @@ for i in range(18):
         "course": selected_course,
         "front_area": front_area,
         "back_area": back_area,
-        "bet_per_person": int(bet_per_person),
-        "completed_holes": int(completed)
+        "bet_per_person": bet_per_person,
+        "completed_holes": completed
     }
     db.collection("golf_games").document(st.session_state.game_id).set(game_data_update)
 
 # =================== 主控端：總結 ===================
 st.subheader("📊 總結結果（主控端）")
-total_bet = int(bet_per_person) * len(players)
+total_bet = bet_per_person * len(players)
 completed = len([i for i in range(18) if st.session_state.get(f"confirm_{i}", False)])
 summary_df = pd.DataFrame({
     "總點數": [running_points[p] for p in players],
-    "結果": [running_points[p] * total_bet - completed * int(bet_per_person) for p in players],
+    "結果": [running_points[p] * total_bet - completed * bet_per_person for p in players],
     "頭銜": [current_titles[p] for p in players]
 }, index=players).sort_values("結果", ascending=False)
 st.dataframe(summary_df, use_container_width=True)
