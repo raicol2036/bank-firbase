@@ -183,18 +183,48 @@ if not players:
 handicaps = {p: st.number_input(f"{p} 差點", 0, 54, 0, key=f"hcp_{p}") for p in players}
 bet_per_person = st.number_input("單局賭金（每人）", 100, 1000, 100)
 
-# =================== 建賽：game_id / 寫入 Firebase / 產生 QR ===================
-from datetime import timezone
-tz = pytz.timezone("Asia/Taipei")
-if (
-    mode == "主控操作端"
-    and st.session_state.get("firebase_initialized")
-    and players
-    and 2 <= len(players) <= 4   # 至少兩人
-    and not st.session_state.get("game_initialized")
-):
+# =================== 建賽：game_id / 寫入 Firebase / 產生 QR（改為按鈕觸發） ===================
+MAX_PLAYERS = 4
+MIN_PLAYERS = 2
+
+# 顯示目前已選人數
+st.info(f"目前已選 {len(players)}/{MAX_PLAYERS} 位（最多 {MAX_PLAYERS} 位）")
+
+# 建立與重設按鈕
+col_a, col_b = st.columns(2)
+with col_a:
+    start_btn = st.button("🚀 建立賽事（手動）", type="primary", use_container_width=True)
+with col_b:
+    reset_btn = st.button("🔄 重設賽事（清除本機狀態）", use_container_width=True)
+
+if reset_btn:
+    # 清光本機初始化旗標與臨時計分，讓你可重新選人再按建立
+    for k in ["game_initialized", "game_id", "qr_bytes", "scores_df", "events_df",
+              "running_points", "current_titles", "hole_logs", "point_bank"]:
+        if k in st.session_state:
+            del st.session_state[k]
+    st.success("已重設本機賽事狀態，請重新選人並按『建立賽事』。")
+    st.stop()
+
+# 僅在按下建立鍵時才進行初始化
+if start_btn:
+    if len(players) < MIN_PLAYERS:
+        st.error(f"至少需要 {MIN_PLAYERS} 位球員才可建立賽事。")
+        st.stop()
+    if len(players) > MAX_PLAYERS:
+        st.error(f"最多僅能選擇 {MAX_PLAYERS} 位球員。")
+        st.stop()
+    if not st.session_state.get("firebase_initialized"):
+        st.error("❌ Firebase 尚未初始化")
+        st.stop()
+    if st.session_state.get("game_initialized"):
+        st.warning("本機已存在賽事，如需重建請先點『重設賽事』。")
+        st.stop()
+
+    tz = pytz.timezone("Asia/Taipei")
     today_str = datetime.now(tz).strftime("%y%m%d")
     games_ref = db.collection("golf_games")
+    # 以當日流水號避免碰撞
     same_day_count = sum(1 for doc in games_ref.stream() if doc.id.startswith(today_str))
     game_id = f"{today_str}_{same_day_count + 1:02d}"
     st.session_state.game_id = game_id
@@ -221,7 +251,7 @@ if (
     st.success("✅ 賽事資料已寫入 Firebase")
     st.write("🆔 賽事編號：", game_id)
 
-    # 產生 QR code（請確認你的正式 App 網址）
+    # 產生可匿名查看的網址（請替換為你的正式部署位址）
     game_url = f"https://bankver13.streamlit.app/?mode=view&game_id={game_id}"
     qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=8, border=4)
     qr.add_data(game_url)
@@ -232,9 +262,10 @@ if (
     img_bytes.seek(0)
     st.session_state.qr_bytes = img_bytes
 
-    st.image(img_bytes, width=180, caption="賽況查詢")
+    st.image(img_bytes, width=180, caption="賽況查詢（掃碼免登入）")
     st.markdown(f"**🔐 遊戲 ID： `{game_id}`**")
     st.markdown("---")
+
 
 # =================== 初始化逐洞 DataFrame / 狀態 ===================
 # 分數 / 事件表（存活於 session_state）
