@@ -1,6 +1,6 @@
 # =================== 必須最先呼叫 ===================
 import streamlit as st
-st.set_page_config(page_title="🏌️ 高爾夫BANK v3.5", layout="centered")
+st.set_page_config(page_title="🏌️ 高爾夫BANK v1.0", layout="centered")
 
 # =================== Imports ===================
 import os
@@ -81,7 +81,7 @@ if "mode" not in st.session_state:
 mode = st.session_state.mode
 
 # =================== 共用：球場選擇（供建立賽事寫入） ===================
-st.title("🏌️ 高爾夫BANK v3.5")
+st.title("🏌️ 高爾夫BANK v1.0")
 
 course_options = course_df["course_name"].unique().tolist()
 selected_course = st.selectbox("選擇球場", course_options)
@@ -308,7 +308,7 @@ penalty_keywords = {"sand", "water", "ob", "miss", "3putt_or_plus3"}
 
 # =================== 逐洞主流程 ===================
 st.markdown("---")
-st.subheader("🕳️ 逐洞輸入與結算（勾或取消都即時重算）")
+st.subheader("🕳️ 逐洞輸入")
 
 # 先畫面輸入階段
 for i in range(18):
