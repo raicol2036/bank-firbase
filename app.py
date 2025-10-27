@@ -426,7 +426,7 @@ for i in range(18):
 
     if len(winners) == 1:
         bird_icon = " 🐦" if is_birdie else ""
-        hole_log = f"🏆 第{i+1}洞勝者：{w}{bird_icon}（池子 +{gain_points}點"
+        hole_log = f"🏆 第{i+1}洞勝者：{w}{bird_icon}（Bank +{gain_points}點"
         if birdie_bonus:
             hole_log += f"｜Birdie 轉入 {birdie_bonus}點"
         hole_log += "）"
