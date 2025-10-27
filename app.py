@@ -433,7 +433,7 @@ for i in range(18):
         if penalty_summary:
             hole_log += f"｜{penalty_summary}"
     else:
-        hole_log = f"⚖️ 第{i+1}洞平手（下洞累積 {point_bank}點）"
+        hole_log = f"⚖️ 第{i+1}洞平手（下洞積分 {point_bank}點）"
         if penalty_summary:
             hole_log += f"｜{penalty_summary}"
 
