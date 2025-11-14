@@ -561,3 +561,27 @@ summary_table = pd.concat([detail_df, summary_extra], axis=1)
 # 顯示
 st.dataframe(summary_table, use_container_width=True)
 
+# =================== 📖 Event Log（主控端，美化版） ===================
+st.subheader("📖 Event Log（主控端）")
+
+if not hole_logs:
+    st.info("目前沒有任何紀錄")
+else:
+    for line in hole_logs:
+        # 依開頭 emoji 決定顏色
+        if line.startswith("🏆"):
+            color = "#4CAF50"   # 勝洞：綠色
+        elif line.startswith("⚖️"):
+            color = "#FFC107"   # 平洞：黃色
+        else:
+            color = "#B0BEC5"   # 其它：灰藍色
+
+        # 有一點縮排、微小字
+        html = f"""
+        <div style="margin-left: 1.5rem; margin-bottom: 0.2rem;">
+            <span style="color:{color}; font-size:0.95rem;">
+                {line}
+            </span>
+        </div>
+        """
+        st.markdown(html, unsafe_allow_html=True)
