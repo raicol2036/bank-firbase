@@ -209,7 +209,15 @@ if not players:
 
 # 差點/賭金
 handicaps = {p: st.number_input(f"{p} 差點", 0, 54, 0, key=f"hcp_{p}") for p in players}
-bet_per_person = st.number_input("單局賭金（每人）", 100, 1000, 100)
+bet_per_person = st.number_input(
+    "單局賭金（每人）",
+    min_value=0,
+    max_value=20000,
+    value=100,
+    step=50,
+    format="%d"
+)
+
 
 # =================== 建賽：game_id / 寫入 Firebase / 產生 QR ===================
 MAX_PLAYERS = 4
