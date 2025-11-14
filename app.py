@@ -1,5 +1,5 @@
 import streamlit as st
-st.set_page_config(page_title="🏌️高爾夫BANKv1.3.5", layout="centered")
+st.set_page_config(page_title="🏌️高爾夫BANK v1.3", layout="centered")
 
 # =================== Imports ===================
 import os
@@ -83,9 +83,10 @@ if "mode" not in st.session_state:
     st.session_state.mode = "主控操作端"
 mode = st.session_state.mode
 
-st.title("🏌️高爾夫BANK v1.3.5")
+# =================== 共用：標題 ===================
+st.title("🏌️高爾夫BANK v1.3")
 
-# =================== 共用：球場選擇（主控端） ===================
+# =================== 主控端：球場選擇 ===================
 if mode == "主控操作端":
 
     course_options = course_df["course_name"].unique().tolist()
@@ -116,7 +117,7 @@ if "game_id" in st.session_state and "qr_bytes" in st.session_state:
     st.markdown(f"**🔐 遊戲 ID： `{st.session_state.game_id}`**")
     st.markdown("---")
 
-# =================== 隊員查看端 ===================
+# =================== 隊員查看端（只讀模式） ===================
 if mode == "隊員查看端":
     from streamlit_autorefresh import st_autorefresh
 
@@ -140,61 +141,58 @@ if mode == "隊員查看端":
         st.stop()
 
     game_data = doc.to_dict()
-    players         = game_data["players"]
-    running_points  = game_data["points"]
-    current_titles  = game_data.get("titles", {p: "" for p in players})
-    hole_logs       = game_data["logs"]
-    completed       = game_data.get("completed_holes", 0)
+    players        = game_data["players"]
+    bank_points    = game_data.get("points", {p: 0 for p in players})
+    hole_points    = game_data.get("hole_points", {p: 0 for p in players})
+    current_titles = game_data.get("titles", {p: "" for p in players})
+    hole_logs      = game_data.get("logs", [])
+    bank_bet       = game_data.get("bet_per_person", 0)
+    hole_bet       = game_data.get("hole_bet_per_person", 0)
 
-    bank_bet  = game_data.get("bank_bet_per_person", game_data.get("bet_per_person", 0))
-    hole_bet  = game_data.get("hole_bet_per_person", 0)
-    enable_hole_bet = hole_bet > 0
+    course     = game_data.get("course", "")
+    front_area = game_data.get("front_area", "")
+    back_area  = game_data.get("back_area", "")
 
-    hole_points = game_data.get("hole_points", {p: 0 for p in players})
-    cash_result = {}
-    if enable_hole_bet:
-        total_pts = sum(hole_points.values())
-        n = len(players)
-        for p in players:
-            cash_result[p] = (n * hole_points[p] - total_pts) * hole_bet
-    else:
-        cash_result = {p: 0 for p in players}
-
-    course      = game_data.get("course", "")
-    front_area  = game_data.get("front_area", "")
-    back_area   = game_data.get("back_area", "")
-
+    # ------- 上方摘要區 -------
     st.markdown("### 📝 比賽資訊")
     st.markdown(f"**比賽球場**　{course}")
     st.markdown(f"**前九洞區域**　{front_area}")
     st.markdown(f"**後九洞區域**　{back_area}")
     st.markdown("")
     st.markdown(f"🧾 **比賽 ID ：** ` {game_id} `")
-    st.markdown(f"💰 **BANK 賭金（每人） ：** `{bank_bet}`")
-    st.markdown(f"💰 **逐洞賭金（每人） ：** `{hole_bet}`")
+    st.markdown(f"💰 **每局賭金（BANK） ：** `{bank_bet}`")
+    st.markdown(f"💰 **每洞賭金（逐洞） ：** `{hole_bet}`")
     st.markdown("")
     st.markdown("👥 **球員：** " + " / ".join(players))
     st.markdown("---")
 
+    # ------- 總結表（BANK + 逐洞） -------
     st.subheader("📊 總結結果")
 
     num_players = len(players)
-    result_dict = {
-        "BANK點數": [running_points[p] for p in players],
-        "BANK結果": [
-            ((running_points[p] * num_players) - 18) * bank_bet
-            for p in players
-        ],
-        "頭銜": [current_titles[p] for p in players]
-    }
-    if enable_hole_bet:
-        result_dict["逐洞點數"] = [hole_points[p] for p in players]
-        result_dict["逐洞結果"] = [cash_result[p] for p in players]
+    total_bank_points = sum(bank_points[p] for p in players)
+    total_hole_points = sum(hole_points[p] for p in players)
 
-    sort_col = "逐洞結果" if enable_hole_bet else "BANK結果"
-    result = pd.DataFrame(result_dict, index=players).sort_values(sort_col, ascending=False)
+    bank_results = {
+        p: ((bank_points[p] * num_players) - 18) * bank_bet
+        for p in players
+    }
+    hole_results = {
+        p: (num_players * hole_points[p] - total_hole_points) * hole_bet
+        for p in players
+    }
+
+    result = pd.DataFrame({
+        "BANK點數": [bank_points[p] for p in players],
+        "逐洞點數": [hole_points[p] for p in players],
+        "BANK結果": [bank_results[p] for p in players],
+        "逐洞結果": [hole_results[p] for p in players],
+        "頭銜": [current_titles[p] for p in players]
+    }, index=players).sort_values("BANK結果", ascending=False)
+
     st.dataframe(result, use_container_width=True)
 
+    # ------- Event Log -------
     st.subheader("📖 Event Log")
     if not hole_logs:
         st.info("目前沒有任何紀錄")
@@ -202,6 +200,7 @@ if mode == "隊員查看端":
         for line in hole_logs:
             st.write(line)
 
+    # 自動刷新（每 10 秒）
     st_autorefresh(interval=10000, key="view_autorefresh")
     st.stop()
 
@@ -212,9 +211,11 @@ if "selected_players" not in st.session_state:
 
 with st.container(border=True):
     st.subheader("球員管理")
+
     def update_selection():
         current = st.session_state.player_selector
-        st.session_state.selected_players = current[:4]
+        st.session_state.selected_players = current[:4]  # 最多 4 位
+
     players = st.multiselect(
         "選擇參賽球員（最多4位）",
         players_all,
@@ -227,12 +228,13 @@ if not players:
     st.warning("⚠️ 請選擇至少一位球員")
     st.stop()
 
+# 差點 / 賭金
 handicaps = {p: st.number_input(f"{p} 差點", 0, 54, 0, key=f"hcp_{p}") for p in players}
 
 col_b1, col_b2 = st.columns(2)
 with col_b1:
-    bank_bet = st.number_input(
-        "單局賭金（每人） BANK",
+    bank_bet_per_person = st.number_input(
+        "單局賭金（每人）BANK",
         min_value=0,
         max_value=20000,
         value=100,
@@ -240,8 +242,8 @@ with col_b1:
         format="%d"
     )
 with col_b2:
-    hole_bet = st.number_input(
-        "單局賭金（每人） 逐洞",
+    hole_bet_per_person = st.number_input(
+        "單局賭金（每人）逐洞",
         min_value=0,
         max_value=20000,
         value=0,
@@ -249,8 +251,9 @@ with col_b2:
         format="%d"
     )
 
-enable_hole_bet = hole_bet > 0
+enable_hole_bet = hole_bet_per_person > 0
 
+# =================== 建賽：game_id / 寫入 Firebase / 產生 QR ===================
 MAX_PLAYERS = 4
 MIN_PLAYERS = 2
 
@@ -301,6 +304,7 @@ if start_btn:
         "scores": {p: {} for p in players},
         "events": {p: {} for p in players},
         "points": {p: 0 for p in players},
+        "hole_points": {p: 0 for p in players},
         "titles": {p: "" for p in players},
         "logs": [],
         "par": par,
@@ -308,11 +312,9 @@ if start_btn:
         "course": selected_course,
         "front_area": front_area,
         "back_area": back_area,
-        "bet_per_person": bank_bet,
-        "bank_bet_per_person": bank_bet,
-        "hole_bet_per_person": hole_bet,
-        "completed_holes": 0,
-        "hole_points": {p: 0 for p in players},
+        "bet_per_person": bank_bet_per_person,
+        "hole_bet_per_person": hole_bet_per_person,
+        "completed_holes": 0
     }
     db.collection("golf_games").document(game_id).set(game_data)
     st.session_state.game_initialized = True
@@ -371,9 +373,8 @@ point_bank = st.session_state.point_bank
 confirmed_holes = st.session_state.confirmed_holes
 current_hole = st.session_state.current_hole
 hole_points = st.session_state.hole_points
-num_players = len(players)
 
-# 事件定義
+# 事件定義（BANK 用）
 event_opts_display = ["下沙", "下水", "OB", "丟球", "加3或3推", "Par on"]
 event_translate = {
     "下沙": "sand",
@@ -386,11 +387,7 @@ event_translate = {
 penalty_keywords = {"sand", "water", "ob", "miss", "3putt_or_plus3"}
 code_to_display = {v: k for k, v in event_translate.items()}
 
-# 👉 新增：記錄每洞 outcome & tie 是否已被追走
-hole_outcome = ["none"] * 18      # "tie" / "win"
-tie_claimed  = [False] * 18       # 該平手洞是否已被 PAR/Birdie 吃掉
-
-# =================== 依已確認洞重新計算 ===================
+# =================== 先依已確認洞「重新計算」所有分數 ===================
 running_points = {p: 0 for p in players}
 current_titles = {p: "" for p in players}
 hole_logs = []
@@ -404,7 +401,7 @@ for i in range(18):
     raw = scores[f"第{i+1}洞"]
     evt = events[f"第{i+1}洞"]
 
-    # 1️⃣ 勝負計算（兩兩比較）
+    # 1️⃣ BANK 勝負計算（兩兩比較，必須全勝才算勝者）
     victory_map = {}
     for p1 in players:
         p1_wins = 0
@@ -422,7 +419,7 @@ for i in range(18):
         victory_map[p1] = p1_wins
     winners = [p for p in players if victory_map[p] == len(players) - 1]
 
-    # 2️⃣ 事件扣點（影響 BANK）
+    # 2️⃣ 事件扣點（只影響 BANK）
     penalty_pool = 0
     event_penalties_actual = {}
     event_detail_labels = {}
@@ -444,7 +441,7 @@ for i in range(18):
         labels = [code_to_display[a] for a in acts if a in code_to_display]
         event_detail_labels[p] = labels
 
-    # 3️⃣ BANK 計算
+    # 3️⃣ BANK 點數計算
     gain_points = point_bank + penalty_pool
     birdie_bonus = 0
 
@@ -460,10 +457,8 @@ for i in range(18):
                     birdie_bonus += 1
             running_points[w] += birdie_bonus
         point_bank = 1
-        hole_outcome[i] = "win"
     else:
         point_bank += 1 + penalty_pool
-        hole_outcome[i] = "tie"
 
     # 4️⃣ 頭銜更新
     next_titles = current_titles.copy()
@@ -485,42 +480,17 @@ for i in range(18):
                 next_titles[p] = "Rich Man"
     current_titles = next_titles
 
-    # 5️⃣ 逐洞點數制（計算本洞 side game 點數，並記錄本洞 +N）
-    side_gain = 0        # 👉 本洞 winner 逐洞加了幾點（用來寫進 LOG）
-
+    # 5️⃣ 逐洞比賽（比桿最低者 +1 累積制）
+    hole_side_gain = {p: 0 for p in players}
     if enable_hole_bet:
-        if len(winners) == 1:
-            w = winners[0]
-            base_points = 1  # 勝洞本身 1 點
+        scores_this_hole = {p: int(raw[p]) for p in players}
+        min_score = min(scores_this_hole.values())
+        hole_winners = [p for p, s in scores_this_hole.items() if s == min_score]
+        for p in hole_winners:
+            hole_points[p] += 1
+            hole_side_gain[p] = 1
 
-            score_w = int(raw[w])
-            chase = 0
-            if score_w == par[i]:
-                chase = 1          # PAR 往前追 1 洞
-            elif score_w == par[i] - 1:
-                chase = 2          # Birdie 往前追 2 洞
-            elif score_w <= par[i] - 2:
-                chase = 3          # Eagle 以上追 3 洞（要縮減可改成 2）
-
-            extra = 0
-            # 只看「最近的前幾洞」，且只吃「當洞為 tie 且尚未被吃掉」
-            for step in range(1, chase + 1):
-                j = i - step
-                if j < 0:
-                    break
-                if hole_outcome[j] == "tie" and not tie_claimed[j]:
-                    extra += 1
-                    tie_claimed[j] = True
-                else:
-                    break
-
-            side_gain = base_points + extra
-            hole_points[w] += side_gain
-        else:
-            # tie 洞本身不加點，等之後 PAR/Birdie 來吃
-            pass
-
-    # 6️⃣ Log（把 side_gain 寫成「逐洞 +N」）
+    # 6️⃣ Log（含 BANK、事件、逐洞）
     penalty_info = []
     for p in players:
         if event_penalties_actual.get(p, 0) > 0:
@@ -541,9 +511,14 @@ for i in range(18):
             hole_log += f"｜Birdie 轉入 {birdie_bonus}點"
         hole_log += "）"
 
-        # 👉 在現有 LOG 後面加上「逐洞 +N」
-        if enable_hole_bet and side_gain > 0:
-            hole_log += f"｜逐洞 +{side_gain}點"
+        # 加入逐洞 LOG
+        if enable_hole_bet:
+            side_parts = [
+                f"{p} +{hole_side_gain[p]}點"
+                for p in players if hole_side_gain[p] > 0
+            ]
+            if side_parts:
+                hole_log += "｜逐洞：" + "、".join(side_parts)
 
         if penalty_summary:
             hole_log += f"｜{penalty_summary}"
@@ -554,49 +529,7 @@ for i in range(18):
 
     hole_logs.append(hole_log)
 
-
-    # 6️⃣ 逐洞點數制（真正修正的地方）
-    if enable_hole_bet:
-        if len(winners) == 1:
-            w = winners[0]
-            base_points = 1  # 勝洞本身 1 點
-
-            score_w = int(raw[w])
-            chase = 0
-            if score_w == par[i]:
-                chase = 1          # PAR 往前追 1 洞
-            elif score_w == par[i] - 1:
-                chase = 2          # Birdie 往前追 2 洞
-            elif score_w <= par[i] - 2:
-                chase = 3          # Eagle 以上追 3 洞（若不想要可改成 2）
-
-            extra = 0
-            # 只看「最近的前幾洞」，且只吃「當洞為 tie 且尚未被吃掉」
-            for step in range(1, chase + 1):
-                j = i - step
-                if j < 0:
-                    break
-                if hole_outcome[j] == "tie" and not tie_claimed[j]:
-                    extra += 1
-                    tie_claimed[j] = True
-                else:
-                    # 一旦遇到不是「尚未被吃掉的 tie」，就停止往更前看
-                    break
-
-            hole_points[w] += base_points + extra
-        else:
-            # tie 洞本身不加點，但可能之後被 PAR / Birdie 吃掉
-            pass
-
-# 逐洞結果（分別比較 Σ(A-B)*賭金）
-cash_result = {p: 0 for p in players}
-if enable_hole_bet:
-    total_pts = sum(hole_points.values())
-    n = len(players)
-    for p in players:
-        cash_result[p] = (n * hole_points[p] - total_pts) * hole_bet
-
-# 回寫最新狀態
+# 回寫最新狀態到 session_state
 st.session_state.running_points = running_points
 st.session_state.current_titles = current_titles
 st.session_state.hole_logs = hole_logs
@@ -607,6 +540,7 @@ st.session_state.hole_points = hole_points
 st.markdown("---")
 st.subheader("🕳️ 逐洞輸入")
 
+# 找下一個尚未確認的洞
 if any(not x for x in confirmed_holes):
     first_unconfirmed = next(i for i, done in enumerate(confirmed_holes) if not done)
     current_hole = first_unconfirmed
@@ -623,6 +557,7 @@ else:
     cols = st.columns(len(players))
     for j, p in enumerate(players):
         with cols[j]:
+            # 頭銜顯示
             if current_titles.get(p) == "Super Rich Man":
                 st.markdown("👑 **Super Rich Man**")
             elif current_titles.get(p) == "Rich Man":
@@ -672,27 +607,28 @@ for i in holes_done:
     col_name = f"洞{i+1}"
     detail_df[col_name] = [scores.loc[p, f"第{i+1}洞"] for p in players]
 
-summary_dict = {
-    "BANK點數": [running_points[p] for p in players],
-    "BANK結果": [
-        ((running_points[p] * num_players) - 18) * bank_bet
-        for p in players
-    ],
-    "頭銜": [current_titles[p] for p in players]
+num_players = len(players)
+total_bank_points = sum(running_points[p] for p in players)
+total_hole_points = sum(hole_points[p] for p in players)
+
+bank_results = {
+    p: ((running_points[p] * num_players) - 18) * bank_bet_per_person
+    for p in players
 }
-if enable_hole_bet:
-    summary_dict["逐洞點數"] = [hole_points[p] for p in players]
-    summary_dict["逐洞結果"] = [cash_result[p] for p in players]
+hole_results = {
+    p: (num_players * hole_points[p] - total_hole_points) * hole_bet_per_person
+    for p in players
+}
 
-summary_extra = pd.DataFrame(summary_dict, index=players)
+summary_extra = pd.DataFrame({
+    "BANK點數": [running_points[p] for p in players],
+    "逐洞點數": [hole_points[p] for p in players],
+    "BANK結果": [bank_results[p] for p in players],
+    "逐洞結果": [hole_results[p] for p in players],
+    "頭銜": [current_titles[p] for p in players]
+}, index=players)
+
 summary_table = pd.concat([detail_df, summary_extra], axis=1)
-
-col_order = list(detail_df.columns)
-bank_cols = ["BANK點數"]
-hole_cols = ["逐洞點數", "逐洞結果"] if enable_hole_bet else []
-result_cols = ["BANK結果", "頭銜"]
-summary_table = summary_table[col_order + bank_cols + hole_cols + result_cols]
-
 st.dataframe(summary_table, use_container_width=True)
 
 # =================== Event Log（主控端，美化版） ===================
@@ -703,11 +639,11 @@ if not hole_logs:
 else:
     for line in hole_logs:
         if line.startswith("🏆"):
-            color = "#4CAF50"
+            color = "#4CAF50"   # 勝洞：綠色
         elif line.startswith("⚖️"):
-            color = "#FFC107"
+            color = "#FFC107"   # 平洞：黃色
         else:
-            color = "#B0BEC5"
+            color = "#B0BEC5"   # 其他：灰藍
 
         html = f"""
         <div style="margin-left: 1.5rem; margin-bottom: 0.2rem;">
@@ -718,12 +654,13 @@ else:
         """
         st.markdown(html, unsafe_allow_html=True)
 
-# =================== 寫回 Firebase ===================
+# =================== 寫回 Firebase （若有 game_id） ===================
 game_data_update = {
     "players": players,
     "scores": scores.to_dict(),
     "events": events.to_dict(),
     "points": running_points,
+    "hole_points": hole_points,
     "titles": current_titles,
     "logs": hole_logs,
     "par": par,
@@ -731,11 +668,9 @@ game_data_update = {
     "course": selected_course,
     "front_area": front_area,
     "back_area": back_area,
-    "bet_per_person": bank_bet,
-    "bank_bet_per_person": bank_bet,
-    "hole_bet_per_person": hole_bet,
-    "completed_holes": completed,
-    "hole_points": hole_points,
+    "bet_per_person": bank_bet_per_person,
+    "hole_bet_per_person": hole_bet_per_person,
+    "completed_holes": completed
 }
 
 if "game_id" not in st.session_state or not st.session_state.game_id:
