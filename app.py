@@ -86,7 +86,7 @@ mode = st.session_state.mode
 # =================== 共用：球場選擇 ===================
 st.title("🏌️ 高爾夫BANK v1.0.2")
 
-# ========== 主控端顯示球場選項 ==========
+# 只在「主控操作端」顯示球場選擇
 if mode == "主控操作端":
 
     course_options = course_df["course_name"].unique().tolist()
@@ -108,18 +108,9 @@ if mode == "主控操作端":
 
     front_par, front_hcp = get_course_info(selected_course, front_area)
     back_par,  back_hcp  = get_course_info(selected_course, back_area)
-
     par = front_par + back_par
     hcp = front_hcp + back_hcp
 
-# ========== 查看端不顯示球場選項 ==========
-else:
-    # 從 Firebase 讀取
-    selected_course = game_data.get("course", "")
-    front_area = game_data.get("front_area", "")
-    back_area  = game_data.get("back_area", "")
-    
-    # par/hcp 不在此處計算，由賽事初始化時已寫入 Firebase，所以不重算
 
 # =================== 若已有 QR / ID 就顯示 ===================
 if "game_id" in st.session_state and "qr_bytes" in st.session_state:
