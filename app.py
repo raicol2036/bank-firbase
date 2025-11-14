@@ -83,6 +83,10 @@ if "mode" not in st.session_state:
     st.session_state.mode = "主控操作端"
 mode = st.session_state.mode
 
+# 預設比賽模式
+if "game_mode" not in st.session_state:
+    st.session_state.game_mode = "BANK 制（累積點數）"
+
 # =================== 共用：球場選擇 ===================
 st.title("🏌️高爾夫BANK v1.3")
 
@@ -110,7 +114,6 @@ if mode == "主控操作端":
     back_par,  back_hcp  = get_course_info(selected_course, back_area)
     par = front_par + back_par
     hcp = front_hcp + back_hcp
-
 
 # =================== 若已有 QR / ID 就顯示 ===================
 if "game_id" in st.session_state and "qr_bytes" in st.session_state:
@@ -148,13 +151,15 @@ if mode == "隊員查看端":
     hole_logs       = game_data["logs"]
     completed       = game_data.get("completed_holes", 0)
     bet_per_person  = game_data["bet_per_person"]
+    game_mode       = game_data.get("game_mode", "BANK 制（累積點數）")
+    cash_result     = game_data.get("cash_result", {p: 0 for p in players})
 
     # 新增：球場與前後九區域
     course      = game_data.get("course", "")
     front_area  = game_data.get("front_area", "")
     back_area   = game_data.get("back_area", "")
 
-    # ------- 上方摘要區（照你截圖的排版） -------
+    # ------- 上方摘要區 -------
     st.markdown("### 📝 比賽資訊")
 
     st.markdown(f"**比賽球場**　{course}")
@@ -164,6 +169,7 @@ if mode == "隊員查看端":
 
     st.markdown(f"🧾 **比賽 ID ：** ` {game_id} `")
     st.markdown(f"💰 **每局賭金 ：** `{bet_per_person}`")
+    st.markdown(f"🎮 **比賽模式 ：** {game_mode}")
     st.markdown("")
     st.markdown("👥 **球員：** " + " / ".join(players))
     st.markdown("---")
@@ -173,14 +179,22 @@ if mode == "隊員查看端":
 
     num_players = len(players)
 
-    result = pd.DataFrame({
-        "總點數": [running_points[p] for p in players],
-        "結果": [
-            ((running_points[p] * num_players) - 18) * bet_per_person
-            for p in players
-        ],
-        "頭銜": [current_titles[p] for p in players]
-    }, index=players).sort_values("結果", ascending=False)
+    if game_mode == "BANK 制（累積點數）":
+        result = pd.DataFrame({
+            "總點數": [running_points[p] for p in players],
+            "結果": [
+                ((running_points[p] * num_players) - 18) * bet_per_person
+                for p in players
+            ],
+            "頭衔": [current_titles[p] for p in players]
+        }, index=players).sort_values("結果", ascending=False)
+    else:
+        # 逐洞賭金制 → 顯示累積金額
+        result = pd.DataFrame({
+            "總點數": [running_points[p] for p in players],
+            "累積金額": [cash_result.get(p, 0) for p in players],
+            "頭衔": [current_titles[p] for p in players]
+        }, index=players).sort_values("累積金額", ascending=False)
 
     st.dataframe(result, use_container_width=True)
 
@@ -231,6 +245,14 @@ bet_per_person = st.number_input(
     format="%d"
 )
 
+# 比賽模式選擇
+game_mode = st.radio(
+    "比賽模式",
+    ["BANK 制（累積點數）", "逐洞賭金制"],
+    index=0 if st.session_state.game_mode == "BANK 制（累積點數）" else 1,
+    horizontal=True
+)
+st.session_state.game_mode = game_mode
 
 # =================== 建賽：game_id / 寫入 Firebase / 產生 QR ===================
 MAX_PLAYERS = 4
@@ -248,7 +270,7 @@ if reset_btn:
     for k in [
         "game_initialized", "game_id", "qr_bytes", "scores_df", "events_df",
         "running_points", "current_titles", "hole_logs", "point_bank",
-        "confirmed_holes", "current_hole"
+        "confirmed_holes", "current_hole", "cash_result", "carry_pots"
     ]:
         if k in st.session_state:
             del st.session_state[k]
@@ -291,7 +313,10 @@ if start_btn:
         "front_area": front_area,
         "back_area": back_area,
         "bet_per_person": bet_per_person,
-        "completed_holes": 0
+        "completed_holes": 0,
+        "game_mode": game_mode,
+        "cash_result": {p: 0 for p in players},
+        "carry_pots": []
     }
     db.collection("golf_games").document(game_id).set(game_data)
     st.session_state.game_initialized = True
@@ -338,6 +363,12 @@ if "confirmed_holes" not in st.session_state:
 if "current_hole" not in st.session_state:
     st.session_state.current_hole = 0
 
+if "cash_result" not in st.session_state or set(st.session_state.get("cash_result", {}).keys()) != set(players):
+    st.session_state.cash_result = {p: 0 for p in players}
+
+if "carry_pots" not in st.session_state:
+    st.session_state.carry_pots = []
+
 scores = st.session_state.scores_df
 events = st.session_state.events_df
 running_points = st.session_state.running_points
@@ -346,6 +377,10 @@ hole_logs = st.session_state.hole_logs
 point_bank = st.session_state.point_bank
 confirmed_holes = st.session_state.confirmed_holes
 current_hole = st.session_state.current_hole
+cash_result = st.session_state.cash_result
+carry_pots = st.session_state.carry_pots
+game_mode = st.session_state.game_mode
+num_players = len(players)
 
 # 事件定義
 event_opts_display = ["下沙", "下水", "OB", "丟球", "加3或3推", "Par on"]
@@ -359,13 +394,16 @@ event_translate = {
 }
 penalty_keywords = {"sand", "water", "ob", "miss", "3putt_or_plus3"}
 
-# 👉 新增：事件代碼 → 顯示文字
+# 👉 事件代碼 → 顯示文字
 code_to_display = {v: k for k, v in event_translate.items()}
+
 # =================== 先依已確認洞「重新計算」所有分數 ===================
 running_points = {p: 0 for p in players}
 current_titles = {p: "" for p in players}
 hole_logs = []
 point_bank = 1
+cash_result = {p: 0 for p in players}
+carry_pots = []
 
 for i in range(18):
     if not confirmed_holes[i]:
@@ -392,10 +430,10 @@ for i in range(18):
         victory_map[p1] = p1_wins
     winners = [p for p in players if victory_map[p] == len(players) - 1]
 
-    # 2️⃣ 事件扣點
+    # 2️⃣ 事件扣點（影響 BANK 點數 & 頭銜）
     penalty_pool = 0
     event_penalties_actual = {}
-    event_detail_labels = {}   # 👉 新增：記錄每位球員本洞事件文字
+    event_detail_labels = {}
 
     for p in players:
         acts = evt[p] if isinstance(evt[p], list) else []
@@ -411,87 +449,126 @@ for i in range(18):
         penalty_pool += actual_penalty
         event_penalties_actual[p] = actual_penalty
 
-        # 👉 把這洞的事件轉成中文（例如 sand → 下沙）
         labels = [code_to_display[a] for a in acts if a in code_to_display]
         event_detail_labels[p] = labels
 
+    # ========== 3️⃣～5️⃣：依比賽模式分流 ==========
+    if game_mode == "BANK 制（累積點數）":
+        # 3️⃣ Bank & Birdie
+        gain_points = point_bank + penalty_pool
+        birdie_bonus = 0
 
-    # 3️⃣ Bank & Birdie
-    gain_points = point_bank + penalty_pool
-    birdie_bonus = 0
+        if len(winners) == 1:
+            w = winners[0]
+            running_points[w] += gain_points
 
-    if len(winners) == 1:
-        w = winners[0]
-        running_points[w] += gain_points
+            is_birdie = int(raw[w]) <= int(par[i]) - 1
+            if is_birdie:
+                for p in players:
+                    if p != w and running_points[p] > 0:
+                        running_points[p] -= 1
+                        birdie_bonus += 1
+                running_points[w] += birdie_bonus
+            point_bank = 1
+        else:
+            point_bank += 1 + penalty_pool
 
-        is_birdie = int(raw[w]) <= int(par[i]) - 1
-        if is_birdie:
-            for p in players:
-                if p != w and running_points[p] > 0:
-                    running_points[p] -= 1
-                    birdie_bonus += 1
-            running_points[w] += birdie_bonus
-        point_bank = 1
+        # 4️⃣ 頭銜更新
+        next_titles = current_titles.copy()
+        for p in players:
+            pt = running_points[p]
+            cur = current_titles.get(p, "")
+            if cur == "":
+                if pt >= 8:
+                    next_titles[p] = "Super Rich Man"
+                elif pt >= 4:
+                    next_titles[p] = "Rich Man"
+            elif cur == "Rich Man":
+                if pt >= 8:
+                    next_titles[p] = "Super Rich Man"
+                elif pt == 0:
+                    next_titles[p] = ""
+            elif cur == "Super Rich Man":
+                if pt < 4:
+                    next_titles[p] = "Rich Man"
+        current_titles = next_titles
+
+        # 5️⃣ Log（BANK）
+        penalty_info = []
+        for p in players:
+            if event_penalties_actual.get(p, 0) > 0:
+                detail = event_detail_labels.get(p, [])
+                if detail:
+                    penalty_info.append(
+                        f"{p} 扣 {event_penalties_actual[p]}點（" + "、".join(detail) + "）"
+                    )
+                else:
+                    penalty_info.append(f"{p} 扣 {event_penalties_actual[p]}點")
+
+        penalty_summary = "｜".join(penalty_info) if penalty_info else ""
+
+        if len(winners) == 1:
+            bird_icon = " 🐦" if int(raw[winners[0]]) <= int(par[i]) - 1 else ""
+            hole_log = f"🏆 第{i+1}洞勝者：{winners[0]}{bird_icon}（Bank +{gain_points}點"
+            if birdie_bonus:
+                hole_log += f"｜Birdie 轉入 {birdie_bonus}點"
+            hole_log += "）"
+            if penalty_summary:
+                hole_log += f"｜{penalty_summary}"
+        else:
+            hole_log = f"⚖️ 第{i+1}洞平手（下洞積分 {point_bank}點）"
+            if penalty_summary:
+                hole_log += f"｜{penalty_summary}"
+
+        hole_logs.append(hole_log)
+
     else:
-        point_bank += 1 + penalty_pool
+        # 逐洞賭金制
+        pot = bet_per_person * num_players
+        gain_cash = 0
 
-    # 4️⃣ 頭銜更新
-    next_titles = current_titles.copy()
-    for p in players:
-        pt = running_points[p]
-        cur = current_titles.get(p, "")
-        if cur == "":
-            if pt >= 8:
-                next_titles[p] = "Super Rich Man"
-            elif pt >= 4:
-                next_titles[p] = "Rich Man"
-        elif cur == "Rich Man":
-            if pt >= 8:
-                next_titles[p] = "Super Rich Man"
-            elif pt == 0:
-                next_titles[p] = ""
-        elif cur == "Super Rich Man":
-            if pt < 4:
-                next_titles[p] = "Rich Man"
-    current_titles = next_titles
+        if len(winners) == 1:
+            w = winners[0]
+            gain_cash += pot  # 本洞獎金
 
-    # 5️⃣ Log
-    penalty_info = []
-    for p in players:
-        if event_penalties_actual.get(p, 0) > 0:
-            detail = event_detail_labels.get(p, [])
-            if detail:
-                # 例如：巫吉生 扣 3點（下沙、OB、Par on）
-                penalty_info.append(
-                    f"{p} 扣 {event_penalties_actual[p]}點（" + "、".join(detail) + "）"
-                )
+            score_w = int(raw[w])
+            extra_take = 0
+            if score_w == par[i]:      # PAR 追溯一洞
+                extra_take = 1
+            elif score_w < par[i]:     # Birdie 追溯兩洞
+                extra_take = 2
+
+            taken = 0
+            for _ in range(extra_take):
+                if carry_pots:
+                    gain_cash += carry_pots.pop(0)
+                    taken += 1
+                else:
+                    break
+
+            cash_result[w] += gain_cash
+
+            # Log
+            hole_log = f"💰 第{i+1}洞勝者：{w}（本洞 +{pot}"
+            if taken:
+                hole_log += f"｜追溯 {taken} 洞獎金，共 +{gain_cash}）"
             else:
-                # 沒事件文字就只顯示扣點
-                penalty_info.append(f"{p} 扣 {event_penalties_actual[p]}點")
+                hole_log += f"，共 +{gain_cash}）"
 
-    penalty_summary = "｜".join(penalty_info) if penalty_info else ""
+        else:
+            # 平手 → 獎金進暫存池
+            carry_pots.append(pot)
+            hole_log = f"⚖️ 第{i+1}洞平手（本洞 {pot} 元暫存，等待之後 Par/Birdie 追溯）"
 
-
-    if len(winners) == 1:
-        bird_icon = " 🐦" if int(raw[winners[0]]) <= int(par[i]) - 1 else ""
-        hole_log = f"🏆 第{i+1}洞勝者：{winners[0]}{bird_icon}（Bank +{gain_points}點"
-        if birdie_bonus:
-            hole_log += f"｜Birdie 轉入 {birdie_bonus}點"
-        hole_log += "）"
-        if penalty_summary:
-            hole_log += f"｜{penalty_summary}"
-    else:
-        hole_log = f"⚖️ 第{i+1}洞平手（下洞積分 {point_bank}點）"
-        if penalty_summary:
-            hole_log += f"｜{penalty_summary}"
-
-    hole_logs.append(hole_log)
+        hole_logs.append(hole_log)
 
 # 回寫最新狀態
 st.session_state.running_points = running_points
 st.session_state.current_titles = current_titles
 st.session_state.hole_logs = hole_logs
 st.session_state.point_bank = point_bank
+st.session_state.cash_result = cash_result
+st.session_state.carry_pots = carry_pots
 
 # =================== 逐洞輸入（只顯示當洞） ===================
 st.markdown("---")
@@ -557,7 +634,6 @@ else:
 completed = sum(1 for x in confirmed_holes if x)
 st.subheader("📊 總結結果（主控端）")
 
-total_bet = bet_per_person * len(players)
 holes_done = [i for i, ok in enumerate(confirmed_holes) if ok]
 
 detail_df = pd.DataFrame(index=players)
@@ -565,17 +641,21 @@ for i in holes_done:
     col_name = f"洞{i+1}"
     detail_df[col_name] = [scores.loc[p, f"第{i+1}洞"] for p in players]
 
-num_players = len(players)
-
-summary_extra = pd.DataFrame({
-    "點數": [running_points[p] for p in players],
-    "結果": [
-        ((running_points[p] * num_players) - 18) * bet_per_person
-        for p in players
-    ],
-    "頭銜": [current_titles[p] for p in players]
-}, index=players)
-
+if game_mode == "BANK 制（累積點數）":
+    summary_extra = pd.DataFrame({
+        "點數": [running_points[p] for p in players],
+        "結果": [
+            ((running_points[p] * num_players) - 18) * bet_per_person
+            for p in players
+        ],
+        "頭衔": [current_titles[p] for p in players]
+    }, index=players)
+else:
+    summary_extra = pd.DataFrame({
+        "點數": [running_points[p] for p in players],
+        "累積金額": [cash_result[p] for p in players],
+        "頭衔": [current_titles[p] for p in players]
+    }, index=players)
 
 summary_table = pd.concat([detail_df, summary_extra], axis=1)
 st.dataframe(summary_table, use_container_width=True)
@@ -587,7 +667,7 @@ if not hole_logs:
     st.info("目前沒有任何紀錄")
 else:
     for line in hole_logs:
-        if line.startswith("🏆"):
+        if line.startswith("🏆") or line.startswith("💰"):
             color = "#4CAF50"   # 勝洞：綠色
         elif line.startswith("⚖️"):
             color = "#FFC107"   # 平洞：黃色
@@ -617,7 +697,10 @@ game_data_update = {
     "front_area": front_area,
     "back_area": back_area,
     "bet_per_person": bet_per_person,
-    "completed_holes": completed
+    "completed_holes": completed,
+    "game_mode": game_mode,
+    "cash_result": cash_result,
+    "carry_pots": carry_pots,
 }
 
 if "game_id" not in st.session_state or not st.session_state.game_id:
