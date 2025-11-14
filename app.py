@@ -1,6 +1,5 @@
-# =================== 必須最先呼叫 ===================
 import streamlit as st
-st.set_page_config(page_title="🏌️ 高爾夫BANK v1.0", layout="centered")
+st.set_page_config(page_title="🏌️ 高爾夫BANK v1.0.1", layout="centered")
 
 # =================== Imports ===================
 import os
@@ -14,7 +13,7 @@ from PIL import Image
 import firebase_admin
 from firebase_admin import credentials, firestore, initialize_app, get_app
 
-# =================== Firebase 初始化（單例 / 安全） ===================
+# =================== Firebase 初始化（單例 + 防呆） ===================
 REQUIRED_KEYS = [
     "type", "project_id", "private_key_id", "private_key",
     "client_email", "client_id", "token_uri"
@@ -22,6 +21,7 @@ REQUIRED_KEYS = [
 
 @st.cache_resource(show_spinner=False)
 def init_firebase():
+    """初始化並回傳 Firestore client（失敗會直接 st.stop）。"""
     if "firebase" not in st.secrets:
         st.error("❌ 找不到 [firebase] secrets。請在 .streamlit/secrets.toml 或雲端 Secrets 新增。")
         st.stop()
@@ -43,11 +43,14 @@ def init_firebase():
         cred = credentials.Certificate(cfg)
         app = initialize_app(cred)
 
-    db = firestore.client(app=app)
-    return db
+    db_client = firestore.client(app=app)
+    return db_client
 
-db = init_firebase()
-st.session_state.db = db
+# 只要 db 不存在或型別不對就重新初始化（避免 AttributeError）
+if "db" not in st.session_state or not hasattr(st.session_state.get("db", None), "collection"):
+    st.session_state.db = init_firebase()
+
+db = st.session_state.db
 st.session_state.firebase_initialized = True
 
 # =================== 讀取 CSV（球場與球員） ===================
@@ -81,7 +84,7 @@ if "mode" not in st.session_state:
 mode = st.session_state.mode
 
 # =================== 共用：球場選擇（供建立賽事寫入） ===================
-st.title("🏌️ 高爾夫BANK v1.0")
+st.title("🏌️ 高爾夫BANK v1.0.1")
 
 course_options = course_df["course_name"].unique().tolist()
 selected_course = st.selectbox("選擇球場", course_options)
@@ -116,11 +119,15 @@ if mode == "隊員查看端":
         st.error("❌ Firebase 尚未初始化")
         st.stop()
 
+    if "db" not in st.session_state or not hasattr(st.session_state.db, "collection"):
+        st.error("⚠️ Firebase 連線失效，請重新整理頁面後再試。")
+        st.stop()
+
     if "game_id" not in st.session_state or not st.session_state.game_id:
         st.warning("⚠️ 未帶入 game_id 參數，無法讀取比賽")
         st.stop()
 
-    # 每次刷新都重新拉資料，結合 autorefresh 可即時看到更新
+    db = st.session_state.db
     game_id = st.session_state.game_id
     doc = db.collection("golf_games").document(game_id).get()
     if not doc.exists:
@@ -183,14 +190,12 @@ if not players:
 handicaps = {p: st.number_input(f"{p} 差點", 0, 54, 0, key=f"hcp_{p}") for p in players}
 bet_per_person = st.number_input("單局賭金（每人）", 100, 1000, 100)
 
-# =================== 建賽：game_id / 寫入 Firebase / 產生 QR（改為按鈕觸發） ===================
+# =================== 建賽：game_id / 寫入 Firebase / 產生 QR ===================
 MAX_PLAYERS = 4
 MIN_PLAYERS = 2
 
-# 顯示目前已選人數
 st.info(f"目前已選 {len(players)}/{MAX_PLAYERS} 位（最多 {MAX_PLAYERS} 位）")
 
-# 建立與重設按鈕
 col_a, col_b = st.columns(2)
 with col_a:
     start_btn = st.button("🚀 建立賽事（手動）", type="primary", use_container_width=True)
@@ -198,7 +203,6 @@ with col_b:
     reset_btn = st.button("🔄 重設賽事（清除本機狀態）", use_container_width=True)
 
 if reset_btn:
-    # 清光本機初始化旗標與臨時計分，讓你可重新選人再按建立
     for k in ["game_initialized", "game_id", "qr_bytes", "scores_df", "events_df",
               "running_points", "current_titles", "hole_logs", "point_bank"]:
         if k in st.session_state:
@@ -214,8 +218,8 @@ if start_btn:
     if len(players) > MAX_PLAYERS:
         st.error(f"最多僅能選擇 {MAX_PLAYERS} 位球員。")
         st.stop()
-    if not st.session_state.get("firebase_initialized"):
-        st.error("❌ Firebase 尚未初始化")
+    if "db" not in st.session_state or not hasattr(st.session_state.db, "collection"):
+        st.error("❌ Firebase 尚未初始化或連線失效")
         st.stop()
     if st.session_state.get("game_initialized"):
         st.warning("本機已存在賽事，如需重建請先點『重設賽事』。")
@@ -223,8 +227,8 @@ if start_btn:
 
     tz = pytz.timezone("Asia/Taipei")
     today_str = datetime.now(tz).strftime("%y%m%d")
+    db = st.session_state.db
     games_ref = db.collection("golf_games")
-    # 以當日流水號避免碰撞
     same_day_count = sum(1 for doc in games_ref.stream() if doc.id.startswith(today_str))
     game_id = f"{today_str}_{same_day_count + 1:02d}"
     st.session_state.game_id = game_id
@@ -266,9 +270,7 @@ if start_btn:
     st.markdown(f"**🔐 遊戲 ID： `{game_id}`**")
     st.markdown("---")
 
-
 # =================== 初始化逐洞 DataFrame / 狀態 ===================
-# 分數 / 事件表（存活於 session_state）
 if "scores_df" not in st.session_state or set(st.session_state.get("scores_df", pd.DataFrame()).index) != set(players):
     st.session_state.scores_df = pd.DataFrame(index=players, columns=[f"第{i+1}洞" for i in range(18)])
 
@@ -310,7 +312,6 @@ penalty_keywords = {"sand", "water", "ob", "miss", "3putt_or_plus3"}
 st.markdown("---")
 st.subheader("🕳️ 逐洞輸入")
 
-# 先畫面輸入階段
 for i in range(18):
     st.markdown(f"### 第{i+1}洞 (Par {par[i]} / HCP {hcp[i]})")
     cols = st.columns(len(players))
@@ -347,7 +348,7 @@ for i in range(18):
     raw = scores[f"第{i+1}洞"]
     evt = events[f"第{i+1}洞"]
 
-    # --- 1️⃣ 勝負計算 ---
+    # --- 1️⃣ 勝負計算（兩兩比較，必須贏所有對手才算勝） ---
     victory_map = {}
     for p1 in players:
         p1_wins = 0
@@ -365,7 +366,7 @@ for i in range(18):
         victory_map[p1] = p1_wins
     winners = [p for p in players if victory_map[p] == len(players) - 1]
 
-    # --- 2️⃣ 事件扣點（扣被扣者、進入池子） ---
+    # --- 2️⃣ 事件扣點（扣被扣者、進入池子；SRM + Par on 多扣 1） ---
     penalty_pool = 0
     event_penalties_actual = {}
     for p in players:
@@ -418,7 +419,7 @@ for i in range(18):
         elif cur == "Super Rich Man":
             if pt < 4:
                 next_titles[p] = "Rich Man"
-        current_titles = next_titles
+    current_titles = next_titles
 
     # --- 5️⃣ Log ---
     penalty_info = [f"{p} 扣 {event_penalties_actual[p]}點" for p in players if event_penalties_actual[p] > 0]
@@ -439,13 +440,14 @@ for i in range(18):
 
     hole_logs.append(hole_log)
 
-# --- 計算完成後寫回狀態與 Firebase ---
+# --- 計算完成後寫回狀態 ---
 st.session_state.running_points = running_points
 st.session_state.current_titles = current_titles
 st.session_state.hole_logs = hole_logs
 st.session_state.point_bank = point_bank
 completed = len([i for i in range(18) if st.session_state.get(f"confirm_{i}", False)])
 
+# --- 準備寫回 Firebase（有 game_id 才寫） ---
 game_data_update = {
     "players": players,
     "scores": scores.to_dict(),
@@ -461,17 +463,35 @@ game_data_update = {
     "bet_per_person": bet_per_person,
     "completed_holes": completed
 }
-db.collection("golf_games").document(st.session_state.game_id).set(game_data_update)
 
-# --- 顯示結果 ---
+if "game_id" not in st.session_state or not st.session_state.game_id:
+    st.warning("⚠️ 賽事尚未建立（沒有 game_id），成績目前僅暫存於本機。")
+else:
+    if "db" not in st.session_state or not hasattr(st.session_state.db, "collection"):
+        st.error("⚠️ Firebase 連線失效，成績無法寫回雲端，請重新整理後再試。")
+    else:
+        try:
+            st.session_state.db.collection("golf_games") \
+                .document(st.session_state.game_id).set(game_data_update)
+        except Exception as e:
+            st.error(f"❌ Firebase 寫入失敗：{e}")
+
+# --- 顯示結果（主控端） ---
 st.subheader("📊 總結結果（主控端）")
 total_bet = bet_per_person * len(players)
 summary_df = pd.DataFrame({
     "總點數": [running_points[p] for p in players],
+    "結果": [running_points[p] * total_bet - completed * bet_per_person for p in players],
     "頭銜": [current_titles[p] for p in players]
-}, index=players).sort_values("總點數", ascending=False)
+}, index=players).sort_values("結果", ascending=False)
 st.dataframe(summary_df, use_container_width=True)
 
-st.subheader("📖 Event Log")
+st.subheader("📖 Event Log（主控端）")
 for line in hole_logs:
     st.text(line)
+
+if "game_id" in st.session_state and st.session_state.game_id:
+    st.markdown("---")
+    st.markdown(f"🆔 **Game ID**：`{st.session_state.game_id}`")
+    if "qr_bytes" in st.session_state:
+        st.image(st.session_state.qr_bytes, width=160, caption="隊員掃碼查看（免登入）")
