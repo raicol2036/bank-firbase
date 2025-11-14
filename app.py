@@ -389,7 +389,7 @@ else:
         st.session_state.current_hole = next_hole
 
         st.success(f"✅ 已確認第{i+1}洞成績")
-        st.experimental_rerun()  # 立刻 rerun，顯示下一洞
+        st.rerun()  # 立刻 rerun，顯示下一洞
 
 # ============ 勾選改變後重新計算所有洞 ============
 running_points = {p: 0 for p in players}
