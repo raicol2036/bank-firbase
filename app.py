@@ -501,7 +501,7 @@ st.session_state.running_points = running_points
 st.session_state.current_titles = current_titles
 st.session_state.hole_logs = hole_logs
 st.session_state.point_bank = point_bank
-completed = len([i for i in range(18) if confirmed_holes(f"confirm_{i}", False)])
+completed = sum(1 for x in confirmed_holes if x)
 
 # --- 準備寫回 Firebase（有 game_id 才寫） ---
 game_data_update = {
