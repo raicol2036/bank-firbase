@@ -288,7 +288,14 @@ if "hole_logs" not in st.session_state:
 
 if "point_bank" not in st.session_state:
     st.session_state.point_bank = 1
+    
+# 👉 新增：紀錄每洞是否已確認、以及目前要輸入哪一洞（0-based）
+if "confirmed_holes" not in st.session_state:
+    st.session_state.confirmed_holes = [False] * 18
 
+if "current_hole" not in st.session_state:
+    st.session_state.current_hole = 0
+    
 scores = st.session_state.scores_df
 events = st.session_state.events_df
 running_points = st.session_state.running_points
@@ -308,32 +315,70 @@ event_translate = {
 }
 penalty_keywords = {"sand", "water", "ob", "miss", "3putt_or_plus3"}
 
-# =================== 逐洞主流程 ===================
+# =================== 逐洞主流程（一次只顯示「當洞」） ===================
 st.markdown("---")
 st.subheader("🕳️ 逐洞輸入")
 
-for i in range(18):
+# 找出下一個尚未確認的洞（避免重新整理後 current_hole 不一致）
+if any(not x for x in confirmed_holes):
+    # 以第一個未確認洞為當洞
+    first_unconfirmed = next(i for i, done in enumerate(confirmed_holes) if not done)
+    current_hole = first_unconfirmed
+    st.session_state.current_hole = current_hole
+else:
+    current_hole = 18
+    st.session_state.current_hole = 18
+
+if current_hole >= 18:
+    st.success("✅ 已完成全部 18 洞成績")
+else:
+    i = current_hole
     st.markdown(f"### 第{i+1}洞 (Par {par[i]} / HCP {hcp[i]})")
     cols = st.columns(len(players))
     for j, p in enumerate(players):
         with cols[j]:
+            # 頭銜顯示
             if current_titles.get(p) == "Super Rich Man":
                 st.markdown("👑 **Super Rich Man**")
             elif current_titles.get(p) == "Rich Man":
                 st.markdown("🏆 **Rich Man**")
 
-            default_score = par[i] if pd.isna(scores.loc[p, f"第{i+1}洞"]) else int(scores.loc[p, f"第{i+1}洞"])
+            # 桿數輸入（保留既有資料）
+            cur_val = scores.loc[p, f"第{i+1}洞"]
+            default_score = par[i] if pd.isna(cur_val) else int(cur_val)
             scores.loc[p, f"第{i+1}洞"] = st.number_input(
                 f"{p} 桿數（目前 {running_points[p]} 點）",
                 min_value=1, max_value=15, value=default_score, key=f"score_{p}_{i}"
             )
+
+            # 事件輸入
+            existing_events = events.loc[p, f"第{i+1}洞"]
+            if isinstance(existing_events, list):
+                default_events_display = [k for k, v in event_translate.items() if v in existing_events]
+            else:
+                default_events_display = []
             selected_display = st.multiselect(
-                f"{p} 事件", event_opts_display, default=[], key=f"event_{p}_{i}"
+                f"{p} 事件", event_opts_display, default=default_events_display, key=f"event_{p}_{i}"
             )
             events.loc[p, f"第{i+1}洞"] = [event_translate[d] for d in selected_display]
 
-    st.checkbox(f"✅ 確認第{i+1}洞成績", key=f"confirm_{i}")
-    st.markdown("---")
+    # ✅ 只給當洞一個確認按鈕
+    confirm_btn = st.button(f"✅ 確認第{i+1}洞成績")
+
+    if confirm_btn:
+        # 標記本洞已完成
+        confirmed_holes[i] = True
+        st.session_state.confirmed_holes = confirmed_holes
+
+        # 找下一洞
+        if any(not x for x in confirmed_holes):
+            next_hole = next(idx for idx, done in enumerate(confirmed_holes) if not done)
+        else:
+            next_hole = 18
+        st.session_state.current_hole = next_hole
+
+        st.success(f"✅ 已確認第{i+1}洞成績")
+        st.experimental_rerun()  # 立刻 rerun，顯示下一洞
 
 # ============ 勾選改變後重新計算所有洞 ============
 running_points = {p: 0 for p in players}
@@ -342,7 +387,7 @@ hole_logs = []
 point_bank = 1  # 起始每洞 1 點
 
 for i in range(18):
-    if not st.session_state.get(f"confirm_{i}", False):
+    if not confirmed_holes[i]:
         continue  # 未確認洞跳過
 
     raw = scores[f"第{i+1}洞"]
@@ -445,7 +490,7 @@ st.session_state.running_points = running_points
 st.session_state.current_titles = current_titles
 st.session_state.hole_logs = hole_logs
 st.session_state.point_bank = point_bank
-completed = len([i for i in range(18) if st.session_state.get(f"confirm_{i}", False)])
+completed = len([i for i in range(18) if confirmed_holes(f"confirm_{i}", False)])
 
 # --- 準備寫回 Firebase（有 game_id 才寫） ---
 game_data_update = {
