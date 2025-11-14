@@ -522,7 +522,7 @@ for i in range(18):
 
     hole_logs.append(hole_log)
 
-    # 6️⃣ 逐洞賭金制（只有當 hole_bet > 0 時啟用）
+        # 6️⃣ 逐洞賭金制（只有當 hole_bet > 0 時啟用）
     # 規則：勝方不算自己 → 每洞獎金 = 賭金 * (人數 - 1)
     #      負方各自 -賭金，勝方 + (賭金 * (人數 - 1) + 追溯獎金)
     if enable_hole_bet:
