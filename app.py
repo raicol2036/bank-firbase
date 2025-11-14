@@ -319,6 +319,16 @@ penalty_keywords = {"sand", "water", "ob", "miss", "3putt_or_plus3"}
 st.markdown("---")
 st.subheader("🕳️ 逐洞輸入")
 
+# 👉 保險：如果還沒建立就先初始化
+if "confirmed_holes" not in st.session_state:
+    st.session_state.confirmed_holes = [False] * 18
+
+if "current_hole" not in st.session_state:
+    st.session_state.current_hole = 0
+
+confirmed_holes = st.session_state.confirmed_holes
+current_hole = st.session_state.current_hole
+
 # 找出下一個尚未確認的洞（避免重新整理後 current_hole 不一致）
 if any(not x for x in confirmed_holes):
     # 以第一個未確認洞為當洞
@@ -328,6 +338,7 @@ if any(not x for x in confirmed_holes):
 else:
     current_hole = 18
     st.session_state.current_hole = 18
+
 
 if current_hole >= 18:
     st.success("✅ 已完成全部 18 洞成績")
