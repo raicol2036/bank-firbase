@@ -523,12 +523,18 @@ for i in range(18):
     hole_logs.append(hole_log)
 
     # 6️⃣ 逐洞賭金制（只有當 hole_bet > 0 時啟用）
+    # 規則：勝方不算自己 → 每洞獎金 = 賭金 * (人數 - 1)
+    #      負方各自 -賭金，勝方 + (賭金 * (人數 - 1) + 追溯獎金)
     if enable_hole_bet:
-        pot = hole_bet * num_players
+        per_hole_pot = hole_bet * (num_players - 1)
+
         if len(winners) == 1:
             w = winners[0]
-            gain_cash = pot
 
+            # 先算本洞基本獎金（來自所有輸家的賭金）
+            gain_cash = per_hole_pot
+
+            # 依 PAR / Birdie 決定可追溯幾洞
             score_w = int(raw[w])
             extra_take = 0
             if score_w == par[i]:
@@ -544,18 +550,30 @@ for i in range(18):
                 else:
                     break
 
-            cash_result[w] += gain_cash
+            # ✅ 實際分配：勝方 +gain_cash；其餘每人 -hole_bet
+            for p in players:
+                if p == w:
+                    cash_result[p] += gain_cash
+                else:
+                    cash_result[p] -= hole_bet
 
-            money_log = f"💰 第{i+1}洞逐洞勝者：{w}（本洞 {pot}"
+            # 紀錄 LOG（顯示正負與追溯洞數）
+            money_log = f"💰 第{i+1}洞逐洞勝者：{w}（本洞 {per_hole_pot}"
             if taken:
                 money_log += f"｜追溯 {taken} 洞，共 +{gain_cash}）"
             else:
                 money_log += f"，共 +{gain_cash}）"
+
         else:
-            carry_pots.append(pot)
-            money_log = f"💰 第{i+1}洞逐洞平手（本洞 {pot} 元暫存，等待之後 Par/Birdie 追溯）"
+            # 平手：此洞先不分勝負，只把「未來某位勝者可拿的獎金」存起來
+            carry_pots.append(per_hole_pot)
+            money_log = (
+                f"💰 第{i+1}洞逐洞平手（本洞 {per_hole_pot} 元暫存，"
+                "等待之後 Par/Birdie 追溯）"
+            )
 
         hole_logs.append(money_log)
+
 
 # 回寫最新狀態
 st.session_state.running_points = running_points
