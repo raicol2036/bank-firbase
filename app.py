@@ -485,7 +485,42 @@ for i in range(18):
                 next_titles[p] = "Rich Man"
     current_titles = next_titles
 
-    # 5️⃣ Log（BANK）
+    # 5️⃣ 逐洞點數制（計算本洞 side game 點數，並記錄本洞 +N）
+    side_gain = 0        # 👉 本洞 winner 逐洞加了幾點（用來寫進 LOG）
+
+    if enable_hole_bet:
+        if len(winners) == 1:
+            w = winners[0]
+            base_points = 1  # 勝洞本身 1 點
+
+            score_w = int(raw[w])
+            chase = 0
+            if score_w == par[i]:
+                chase = 1          # PAR 往前追 1 洞
+            elif score_w == par[i] - 1:
+                chase = 2          # Birdie 往前追 2 洞
+            elif score_w <= par[i] - 2:
+                chase = 3          # Eagle 以上追 3 洞（要縮減可改成 2）
+
+            extra = 0
+            # 只看「最近的前幾洞」，且只吃「當洞為 tie 且尚未被吃掉」
+            for step in range(1, chase + 1):
+                j = i - step
+                if j < 0:
+                    break
+                if hole_outcome[j] == "tie" and not tie_claimed[j]:
+                    extra += 1
+                    tie_claimed[j] = True
+                else:
+                    break
+
+            side_gain = base_points + extra
+            hole_points[w] += side_gain
+        else:
+            # tie 洞本身不加點，等之後 PAR/Birdie 來吃
+            pass
+
+    # 6️⃣ Log（把 side_gain 寫成「逐洞 +N」）
     penalty_info = []
     for p in players:
         if event_penalties_actual.get(p, 0) > 0:
@@ -499,11 +534,17 @@ for i in range(18):
     penalty_summary = "｜".join(penalty_info) if penalty_info else ""
 
     if len(winners) == 1:
-        bird_icon = " 🐦" if int(raw[winners[0]]) <= int(par[i]) - 1 else ""
-        hole_log = f"🏆 第{i+1}洞勝者：{winners[0]}{bird_icon}（Bank +{gain_points}點"
+        w = winners[0]
+        bird_icon = " 🐦" if int(raw[w]) <= int(par[i]) - 1 else ""
+        hole_log = f"🏆 第{i+1}洞勝者：{w}{bird_icon}（Bank +{gain_points}點"
         if birdie_bonus:
             hole_log += f"｜Birdie 轉入 {birdie_bonus}點"
         hole_log += "）"
+
+        # 👉 在現有 LOG 後面加上「逐洞 +N」
+        if enable_hole_bet and side_gain > 0:
+            hole_log += f"｜逐洞 +{side_gain}點"
+
         if penalty_summary:
             hole_log += f"｜{penalty_summary}"
     else:
@@ -512,6 +553,7 @@ for i in range(18):
             hole_log += f"｜{penalty_summary}"
 
     hole_logs.append(hole_log)
+
 
     # 6️⃣ 逐洞點數制（真正修正的地方）
     if enable_hole_bet:
