@@ -1,5 +1,5 @@
 import streamlit as st
-st.set_page_config(page_title="🏌️ 高爾夫BANK v1.0.2", layout="centered")
+st.set_page_config(page_title="🏌️高爾夫BANKv1.3", layout="centered")
 
 # =================== Imports ===================
 import os
