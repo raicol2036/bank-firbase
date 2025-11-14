@@ -163,7 +163,7 @@ if mode == "隊員查看端":
     st.markdown(f"💰 **每局賭金（BANK） ：** `{bank_bet}`")
     st.markdown(f"💰 **每洞賭金（逐洞） ：** `{hole_bet}`")
     st.markdown("")
-    st.markdown("👥 **球員：** " + " / ".join(players))
+    st.markmarkdown("👥 **球員：** " + " / ".join(players))
     st.markdown("---")
 
     # ------- 總結表（BANK + 逐洞） -------
@@ -394,6 +394,10 @@ hole_logs = []
 point_bank = 1
 hole_points = {p: 0 for p in players}
 
+# side game 需要記錄哪些洞是「平手且尚未被吃掉」
+hole_outcome = ["none"] * 18    # "win" / "tie" / "none"
+tie_claimed = [False] * 18       # 被 PAR / Birdie 吃掉的平手洞
+
 for i in range(18):
     if not confirmed_holes[i]:
         continue
@@ -457,8 +461,10 @@ for i in range(18):
                     birdie_bonus += 1
             running_points[w] += birdie_bonus
         point_bank = 1
+        hole_outcome[i] = "win"
     else:
         point_bank += 1 + penalty_pool
+        hole_outcome[i] = "tie"
 
     # 4️⃣ 頭銜更新
     next_titles = current_titles.copy()
@@ -480,15 +486,42 @@ for i in range(18):
                 next_titles[p] = "Rich Man"
     current_titles = next_titles
 
-    # 5️⃣ 逐洞比賽（比桿最低者 +1 累積制）
-    hole_side_gain = {p: 0 for p in players}
+    # 5️⃣ 逐洞比賽（平手不計點，PAR 追 1 洞，Birdie 追 2 洞）
+    side_gain = 0
     if enable_hole_bet:
+        # 只有唯一最低桿者才有機會拿逐洞
         scores_this_hole = {p: int(raw[p]) for p in players}
         min_score = min(scores_this_hole.values())
-        hole_winners = [p for p, s in scores_this_hole.items() if s == min_score]
-        for p in hole_winners:
-            hole_points[p] += 1
-            hole_side_gain[p] = 1
+        hole_winners_raw = [p for p, s in scores_this_hole.items() if s == min_score]
+
+        if len(hole_winners_raw) == 1:
+            w_side = hole_winners_raw[0]
+            score_w = scores_this_hole[w_side]
+
+            base_gain = 1  # 當洞勝者 +1 點
+            chase = 0
+            if score_w == par[i]:
+                chase = 1          # PAR 往前追 1 洞
+            elif score_w == par[i] - 1:
+                chase = 2          # Birdie 往前追 2 洞
+            elif score_w <= par[i] - 2:
+                chase = 2          # Eagle 以上，先同樣當作追 2 洞
+
+            extra = 0
+            # 往前找尚未被吃掉的「平手洞」，最多 chase 洞數
+            for step in range(1, chase + 1):
+                j = i - step
+                if j < 0:
+                    break
+                if hole_outcome[j] == "tie" and not tie_claimed[j]:
+                    extra += 1
+                    tie_claimed[j] = True
+                else:
+                    break
+
+            side_gain = base_gain + extra
+            hole_points[w_side] += side_gain
+        # 若當洞比桿平手 → 平手不計點，等之後 PAR / Birdie 來追
 
     # 6️⃣ Log（含 BANK、事件、逐洞）
     penalty_info = []
@@ -511,14 +544,9 @@ for i in range(18):
             hole_log += f"｜Birdie 轉入 {birdie_bonus}點"
         hole_log += "）"
 
-        # 加入逐洞 LOG
-        if enable_hole_bet:
-            side_parts = [
-                f"{p} +{hole_side_gain[p]}點"
-                for p in players if hole_side_gain[p] > 0
-            ]
-            if side_parts:
-                hole_log += "｜逐洞：" + "、".join(side_parts)
+        # 加入逐洞 LOG：逐洞 +N（只有逐洞勝者）
+        if enable_hole_bet and side_gain > 0:
+            hole_log += f"｜逐洞 +{side_gain}點"
 
         if penalty_summary:
             hole_log += f"｜{penalty_summary}"
