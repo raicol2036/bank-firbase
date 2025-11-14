@@ -171,11 +171,17 @@ if mode == "隊員查看端":
     # ------- 總結表 -------
     st.subheader("📊 總結結果")
 
+    num_players = len(players)
+
     result = pd.DataFrame({
         "總點數": [running_points[p] for p in players],
-        "結果":   [running_points[p] * bet_per_person for p in players],
-        "頭銜":   [current_titles[p] for p in players]
+        "結果": [
+            ((running_points[p] * num_players) - 18) * bet_per_person
+            for p in players
+        ],
+        "頭銜": [current_titles[p] for p in players]
     }, index=players).sort_values("結果", ascending=False)
+
     st.dataframe(result, use_container_width=True)
 
     # ------- Event Log（簡單版查看端） -------
@@ -559,11 +565,17 @@ for i in holes_done:
     col_name = f"洞{i+1}"
     detail_df[col_name] = [scores.loc[p, f"第{i+1}洞"] for p in players]
 
+num_players = len(players)
+
 summary_extra = pd.DataFrame({
     "點數": [running_points[p] for p in players],
-    "結果": [running_points[p] * bet_per_person for p in players],
+    "結果": [
+        ((running_points[p] * num_players) - 18) * bet_per_person
+        for p in players
+    ],
     "頭銜": [current_titles[p] for p in players]
 }, index=players)
+
 
 summary_table = pd.concat([detail_df, summary_extra], axis=1)
 st.dataframe(summary_table, use_container_width=True)
