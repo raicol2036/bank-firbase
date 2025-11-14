@@ -318,6 +318,8 @@ event_translate = {
 }
 penalty_keywords = {"sand", "water", "ob", "miss", "3putt_or_plus3"}
 
+# 👉 新增：事件代碼 → 顯示文字
+code_to_display = {v: k for k, v in event_translate.items()}
 # =================== 先依已確認洞「重新計算」所有分數 ===================
 running_points = {p: 0 for p in players}
 current_titles = {p: "" for p in players}
@@ -352,6 +354,8 @@ for i in range(18):
     # 2️⃣ 事件扣點
     penalty_pool = 0
     event_penalties_actual = {}
+    event_detail_labels = {}   # 👉 新增：記錄每位球員本洞事件文字
+
     for p in players:
         acts = evt[p] if isinstance(evt[p], list) else []
         pen = 0
@@ -360,10 +364,16 @@ for i in range(18):
             if current_titles[p] == "Super Rich Man" and "par_on" in acts:
                 pen += 1
             pen = min(pen, 3)
+
         actual_penalty = min(pen, running_points[p])
         running_points[p] -= actual_penalty
         penalty_pool += actual_penalty
         event_penalties_actual[p] = actual_penalty
+
+        # 👉 把這洞的事件轉成中文（例如 sand → 下沙）
+        labels = [code_to_display[a] for a in acts if a in code_to_display]
+        event_detail_labels[p] = labels
+
 
     # 3️⃣ Bank & Birdie
     gain_points = point_bank + penalty_pool
@@ -405,8 +415,21 @@ for i in range(18):
     current_titles = next_titles
 
     # 5️⃣ Log
-    penalty_info = [f"{p} 扣 {event_penalties_actual[p]}點" for p in players if event_penalties_actual[p] > 0]
+    penalty_info = []
+    for p in players:
+        if event_penalties_actual.get(p, 0) > 0:
+            detail = event_detail_labels.get(p, [])
+            if detail:
+                # 例如：巫吉生 扣 3點（下沙、OB、Par on）
+                penalty_info.append(
+                    f"{p} 扣 {event_penalties_actual[p]}點（" + "、".join(detail) + "）"
+                )
+            else:
+                # 沒事件文字就只顯示扣點
+                penalty_info.append(f"{p} 扣 {event_penalties_actual[p]}點")
+
     penalty_summary = "｜".join(penalty_info) if penalty_info else ""
+
 
     if len(winners) == 1:
         bird_icon = " 🐦" if int(raw[winners[0]]) <= int(par[i]) - 1 else ""
