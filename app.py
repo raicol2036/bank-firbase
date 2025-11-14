@@ -533,21 +533,31 @@ else:
             st.error(f"❌ Firebase 寫入失敗：{e}")
 
 # --- 顯示結果（主控端） ---
+# =================== 📊 總結結果（主控端） ===================
 st.subheader("📊 總結結果（主控端）")
+
 total_bet = bet_per_person * len(players)
-summary_df = pd.DataFrame({
-    "總點數": [running_points[p] for p in players],
-    "結果": [running_points[p] * total_bet - completed * bet_per_person for p in players],
+
+# --------- 1️⃣ 每洞桿數（只顯示已確認洞） ---------
+holes_done = [i for i, ok in enumerate(confirmed_holes) if ok]
+
+detail_df = pd.DataFrame(index=players)
+
+# 只顯示有確認的洞（洞1、洞2…)
+for i in holes_done:
+    col_name = f"洞{i+1}"
+    detail_df[col_name] = [scores.loc[p, f"第{i+1}洞"] for p in players]
+
+# --------- 2️⃣ 加入總點數 / 結果 / 頭銜 ---------
+summary_extra = pd.DataFrame({
+    "點數": [running_points[p] for p in players],
+    "結果": [running_points[p] * bet_per_person for p in players],
     "頭銜": [current_titles[p] for p in players]
-}, index=players).sort_values("結果", ascending=False)
-st.dataframe(summary_df, use_container_width=True)
+}, index=players)
 
-st.subheader("📖 Event Log（主控端）")
-for line in hole_logs:
-    st.text(line)
+# --------- 3️⃣ 合併：每洞桿數 → 點數 → 結果 → 頭銜 ---------
+summary_table = pd.concat([detail_df, summary_extra], axis=1)
 
-if "game_id" in st.session_state and st.session_state.game_id:
-    st.markdown("---")
-    st.markdown(f"🆔 **Game ID**：`{st.session_state.game_id}`")
-    if "qr_bytes" in st.session_state:
-        st.image(st.session_state.qr_bytes, width=160, caption="隊員掃碼查看（免登入）")
+# 顯示
+st.dataframe(summary_table, use_container_width=True)
+
