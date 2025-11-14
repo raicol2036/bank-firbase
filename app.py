@@ -84,28 +84,26 @@ if "mode" not in st.session_state:
 mode = st.session_state.mode
 
 # =================== 共用：球場選擇 ===================
-st.title("🏌️ 高爾夫BANK v1.0.2")
+st.title("🏌️ 高爾夫BANK v1.0")
 
-# 🟡 只在主控操作端顯示球場選擇
-if mode == "主控操作端":
-    course_options = course_df["course_name"].unique().tolist()
-    selected_course = st.selectbox("選擇球場", course_options)
+course_options = course_df["course_name"].unique().tolist()
+selected_course = st.selectbox("選擇球場", course_options)
 
-    def get_area_options(cname):
-        return course_df[course_df["course_name"] == cname]["area"].unique().tolist()
+def get_area_options(cname):
+    return course_df[course_df["course_name"] == cname]["area"].unique().tolist()
 
-    filtered_area = get_area_options(selected_course)
-    front_area = st.selectbox("前九洞區域", filtered_area, key="front_area")
-    back_area  = st.selectbox("後九洞區域", filtered_area, key="back_area")
+filtered_area = get_area_options(selected_course)
+front_area = st.selectbox("前九洞區域", filtered_area, key="front_area")
+back_area  = st.selectbox("後九洞區域", filtered_area, key="back_area")
 
-    # 主控端要用來算 par / hcp
-    front_par, front_hcp = get_course_info(selected_course, front_area)
-    back_par,  back_hcp  = get_course_info(selected_course, back_area)
-    par = front_par + back_par
-    hcp = front_hcp + back_hcp
+def get_course_info(cname, area):
+    temp = course_df[(course_df["course_name"] == cname) & (course_df["area"] == area)].sort_values("hole")
+    return temp["par"].tolist(), temp["hcp"].tolist()
 
-# 🔵 查看端：完全不顯示選項，par/hcp 等從 Firebase 裡讀（在隊員查看端的 if block 裡用）
-
+front_par, front_hcp = get_course_info(selected_course, front_area)
+back_par,  back_hcp  = get_course_info(selected_course, back_area)
+par = front_par + back_par
+hcp = front_hcp + back_hcp
 # =================== 若已有 QR / ID 就顯示 ===================
 if "game_id" in st.session_state and "qr_bytes" in st.session_state:
     st.image(st.session_state.qr_bytes, width=180, caption="賽況查詢")
