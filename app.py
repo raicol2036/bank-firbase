@@ -1,5 +1,5 @@
 import streamlit as st
-st.set_page_config(page_title="🏌️高爾夫BANKv1.3.3", layout="centered")
+st.set_page_config(page_title="🏌️高爾夫BANKv1.3.4", layout="centered")
 
 # =================== Imports ===================
 import os
@@ -83,7 +83,7 @@ if "mode" not in st.session_state:
     st.session_state.mode = "主控操作端"
 mode = st.session_state.mode
 
-st.title("🏌️高爾夫BANK v1.3.3")
+st.title("🏌️高爾夫BANK v1.3.4")
 
 # =================== 共用：球場選擇（主控端） ===================
 if mode == "主控操作端":
@@ -151,7 +151,7 @@ if mode == "隊員查看端":
     hole_bet  = game_data.get("hole_bet_per_person", 0)
     enable_hole_bet = hole_bet > 0
 
-    # 逐洞點數 & 結果（兩兩比較：Σ(A-B)×賭金）
+    # 逐洞點數 & 結果（分別比較：Σ(A-B)×賭金）
     hole_points = game_data.get("hole_points", {p: 0 for p in players})
     cash_result = {}
     if enable_hole_bet:
@@ -281,7 +281,7 @@ if reset_btn:
     for k in [
         "game_initialized", "game_id", "qr_bytes", "scores_df", "events_df",
         "running_points", "current_titles", "hole_logs", "point_bank",
-        "confirmed_holes", "current_hole", "hole_points"
+        "confirmed_holes", "current_hole", "hole_points", "hole_carry_count"
     ]:
         if k in st.session_state:
             del st.session_state[k]
@@ -377,6 +377,9 @@ if "current_hole" not in st.session_state:
 if "hole_points" not in st.session_state or set(st.session_state.get("hole_points", {}).keys()) != set(players):
     st.session_state.hole_points = {p: 0 for p in players}
 
+if "hole_carry_count" not in st.session_state:
+    st.session_state.hole_carry_count = 0  # 平手累積洞數（供 PAR/Birdie 往前追）
+
 scores = st.session_state.scores_df
 events = st.session_state.events_df
 running_points = st.session_state.running_points
@@ -386,6 +389,7 @@ point_bank = st.session_state.point_bank
 confirmed_holes = st.session_state.confirmed_holes
 current_hole = st.session_state.current_hole
 hole_points = st.session_state.hole_points
+hole_carry_count = st.session_state.hole_carry_count
 num_players = len(players)
 
 # 事件定義
@@ -407,6 +411,7 @@ current_titles = {p: "" for p in players}
 hole_logs = []
 point_bank = 1
 hole_points = {p: 0 for p in players}
+hole_carry_count = 0  # 從頭重新累積
 
 for i in range(18):
     if not confirmed_holes[i]:
@@ -522,11 +527,29 @@ for i in range(18):
 
     hole_logs.append(hole_log)
 
-    # 6️⃣ 逐洞點數制：勝者 +1 點，其餘 0 點（只有賭金 > 0 才啟用）
-    if enable_hole_bet and len(winners) == 1:
-        w = winners[0]
-        hole_points[w] += 1
-        hole_logs.append(f"💰 第{i+1}洞逐洞勝者：{w}（逐洞點數 +1）")
+    # 6️⃣ 逐洞點數制：勝者 +1，平手累積可被 PAR/Birdie 追溯
+    if enable_hole_bet:
+        if len(winners) == 1:
+            w = winners[0]
+
+            # 先算本洞固定 +1 點
+            extra_take = 0
+            score_w = int(raw[w])
+
+            # 判斷 PAR / Birdie / Eagle 往前追幾洞
+            if score_w == par[i]:
+                extra_take = 1       # PAR 追 1 洞
+            elif score_w == par[i] - 1:
+                extra_take = 2       # Birdie 追 2 洞
+            elif score_w <= par[i] - 2:
+                extra_take = 3       # Eagle 以上 追 3 洞（若累積不足就能追多少算多少）
+
+            take = min(extra_take, hole_carry_count)
+            hole_points[w] += 1 + take
+            hole_carry_count -= take
+        else:
+            # 平手 → 累積一洞，等待之後 PAR / Birdie 來追
+            hole_carry_count += 1
 
 # 根據逐洞點數計算逐洞結果（$）── 分別比較：Σ(A-B)×賭金
 cash_result = {p: 0 for p in players}
@@ -542,6 +565,7 @@ st.session_state.current_titles = current_titles
 st.session_state.hole_logs = hole_logs
 st.session_state.point_bank = point_bank
 st.session_state.hole_points = hole_points
+st.session_state.hole_carry_count = hole_carry_count
 
 # =================== 逐洞輸入（只顯示當洞） ===================
 st.markdown("---")
@@ -645,7 +669,7 @@ if not hole_logs:
     st.info("目前沒有任何紀錄")
 else:
     for line in hole_logs:
-        if line.startswith("🏆") or line.startswith("💰"):
+        if line.startswith("🏆"):
             color = "#4CAF50"
         elif line.startswith("⚖️"):
             color = "#FFC107"
