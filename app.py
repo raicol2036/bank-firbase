@@ -111,7 +111,7 @@ if "game_id" in st.session_state and "qr_bytes" in st.session_state:
     st.markdown(f"**🔐 遊戲 ID： `{st.session_state.game_id}`**")
     st.markdown("---")
 
-# =================== 隊員查看端 ===================
+# =================== 隊員查看端（美化版） ===================
 if mode == "隊員查看端":
     from streamlit_autorefresh import st_autorefresh
 
@@ -142,28 +142,48 @@ if mode == "隊員查看端":
     completed       = game_data.get("completed_holes", 0)
     bet_per_person  = game_data["bet_per_person"]
 
-    st.markdown(f"🏷️ **比賽 ID**： `{game_id}`")
-    st.markdown(f"💰 **每局賭金**： `{bet_per_person}`")
-    st.markdown(" / ".join(players))
+    # 新增：球場與前後九區域
+    course      = game_data.get("course", "")
+    front_area  = game_data.get("front_area", "")
+    back_area   = game_data.get("back_area", "")
+
+    # ------- 上方摘要區（照你截圖的排版） -------
+    st.markdown("### 📝 比賽資訊")
+
+    st.markdown(f"**比賽球場**　{course}")
+    st.markdown(f"**前九洞區域**　{front_area}")
+    st.markdown(f"**後九洞區域**　{back_area}")
+    st.markdown("")  # 空一行
+
+    st.markdown(f"🧾 **比賽 ID ：** ` {game_id} `")
+    st.markdown(f"💰 **每局賭金 ：** `{bet_per_person}`")
+    st.markdown("")
+    st.markdown("👥 **球員：** " + " / ".join(players))
     st.markdown("---")
 
+    # ------- 總結表 -------
     st.subheader("📊 總結結果")
+
     result = pd.DataFrame({
         "總點數": [running_points[p] for p in players],
-        "結果": [running_points[p] * bet_per_person for p in players],
-        "頭銜": [current_titles[p] for p in players]
+        "結果":   [running_points[p] * bet_per_person for p in players],
+        "頭銜":   [current_titles[p] for p in players]
     }, index=players).sort_values("結果", ascending=False)
     st.dataframe(result, use_container_width=True)
 
+    # ------- Event Log（簡單版查看端） -------
     st.subheader("📖 Event Log")
+
     if not hole_logs:
         st.info("目前沒有任何紀錄")
     else:
         for line in hole_logs:
-            st.text(line)
+            st.write(line)
 
+    # 自動刷新（每 10 秒）
     st_autorefresh(interval=10000, key="view_autorefresh")
     st.stop()
+
 
 # =================== 主控操作端：球員/差點/賭金 ===================
 players_all = st.session_state.players
