@@ -163,7 +163,7 @@ if mode == "隊員查看端":
     st.markdown(f"💰 **每局賭金（BANK） ：** `{bank_bet}`")
     st.markdown(f"💰 **每洞賭金（逐洞） ：** `{hole_bet}`")
     st.markdown("")
-    st.markmarkdown("👥 **球員：** " + " / ".join(players))
+    st.markdown("👥 **球員：** " + " / ".join(players))
     st.markdown("---")
 
     # ------- 總結表（BANK + 逐洞） -------
